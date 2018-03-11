@@ -1,0 +1,31 @@
+data_dir: ./data
+mask_dir: ./
+maskname: 220506+014703_mask.fits
+output_dir: ./
+filename: 220506+014703
+science_tag: _sci.fits
+err_tag: _var.fits
+err_type: VAR
+psf_tag: _psf.fits
+rmax: 20.0
+Nwalkers: 50
+Nsteps: 1000
+main_band: i
+filter_prefix: HSC-
+filter_suffix: .txt
+filters: g, r, i, z, y
+zeropoints: 27.000000, 27.000000, 27.000000, 27.000000, 27.000000
+fitbands: g, r, i, z, y
+
+# MODELS
+
+light_model Sersic template
+x 50.603798 48.000000 52.000000 0.100000 1
+y 48.593017 48.000000 52.000000 0.100000 1
+q 0.466553 0.200000 2.000000 0.030000 1
+re 5.248710 1.000000 20.000000 0.100000 1
+pa 3.030050 -90.000000 90.000000 3.000000 1
+n 6.005364 0.500000 8.000000 0.100000 1
+zs 1. 0. 4. 2. 1
+tn 4. 0. 7. 4. 1
+
