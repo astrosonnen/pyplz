@@ -482,9 +482,9 @@ for configfile in confnames:
         source = SBModels.Sersic('source%d'%ncomp, pardict)
         source_models.append(source)
         if comp['sed'] == 'freecolors':
-            sed = SEDModels.Colors('light_sed%d'%ncomp, seddict, filtdict, zp=zp)
+            sed = SEDModels.Colors('light_sed%d'%ncomp, seddict, filtdic, zp=zp)
         elif comp['sed'] == 'template':
-            sed = SEDModels.Template('light_sed%d'%ncomp, seddict, filtdict, zp=zp)
+            sed = SEDModels.Template('light_sed%d'%ncomp, seddict, filtdic, zp=zp)
         source_seds.append(sed)
         ncomp += 1
     
