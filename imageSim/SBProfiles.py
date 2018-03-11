@@ -74,7 +74,7 @@ class Sersic:
             # The central pixels are tricky because we can't assume that we
             #   are integrating in delta-theta segments of an annulus; these
             #   pixels are treated separately by sub-sampling with ~500 pixels
-            if R0[i]<3*scale/self.re:
+            if R0[i]<3*scale/self.re: # the pixels within 3*scale are evaluated by sub-sampling
                 s[i] = 0.
                 y0 = c[1]+y[i]
                 x0 = c[0]+x[i]
@@ -87,13 +87,6 @@ class Sersic:
             hi = R0[i]+0.5*scale/self.re
             angle = (scale/self.re)/R0[i]
             s[i] = angle*interpolate.splint(lo,hi,model2)
-            # The following code should no longer be needed
-            """
-            if lo<0:
-                s[i] = ((interpolate.splint(0,abs(lo),model2)+interpolate.splint(0,hi,model2)))*pi*2
-            else:
-                s[i] = angle*interpolate.splint(lo,hi,model2)
-            """
         return self.amp*s.reshape(shape)
 
 
