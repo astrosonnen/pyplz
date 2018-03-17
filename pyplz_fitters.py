@@ -10,7 +10,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
     npars = len(model.pars)
 
     for j in range(npars):
-        a, b = (model.pars[j].lower - model.pars[j].value)/model.pars[j].step, (model.pars[j].lower - model.pars[j].value)/model.pars[j].step
+
+        a, b = (model.pars[j].lower - model.pars[j].value)/model.pars[j].step, (model.pars[j].upper - model.pars[j].value)/model.pars[j].step
         tmp = truncnorm.rvs(a, b, size=nwalkers)*model.pars[j].step + model.pars[j].value
         start.append(tmp)
 
@@ -22,7 +23,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 return -np.inf
         return 0.
 
-    nlight = len(model.lens_sb_models)
+    nlight = len(model.light_sb_models)
     nsource = len(model.source_sb_models)
     ncomp = nlight + nsource
 

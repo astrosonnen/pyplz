@@ -298,6 +298,8 @@ class PyPLZModel:
         ny, nx = self.sci[self.bands[0]].shape
         X, Y = np.meshgrid(np.arange(1.*nx), np.arange(1.*ny))
 
+        self.ny = ny
+        self.nx = nx
         self.X = X
         self.Y = Y
         self.R = ((X - nx/2)**2 + (Y - ny/2)**2)**0.5
@@ -498,7 +500,7 @@ class PyPLZModel:
         for source_sed in self.source_sed_models:
             source_sed.setPars()
 
-    def optimize_amp():
+    def optimize_amp(self):
 
         light_ind_model = []
         source_ind_model = []
@@ -507,30 +509,30 @@ class PyPLZModel:
         
         modlist = []
 
-        for light, sed, mags in zip(self.light_sb_models, self.light_mags):
+        for light, sed, mags in zip(self.light_sb_models, self.light_sed_models, self.light_mags):
             light.amp = 1.
-            lpix = light.pixeval(X, Y)
+            lpix = light.pixeval(self.X, self.Y)
             lmodel = 0. * self.scistack
             for i in range(self.nbands):
                 scale = sed.scale(self.bands[i], self.main_band)
-                lmodel[i*ny: (i+1)*ny, :] = scale * convolve.convolve(lpix, convol_matrix[self.bands[i]], False)[0]
+                lmodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(lpix, self.convol_matrix[self.bands[i]], False)[0]
                 mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
     
-            modlist.append((lmodel/sigmastack).ravel()[maskstack_r])
+            modlist.append((lmodel/self.errstack).ravel()[self.maskstack_r])
     
-        for source, sed, mags in zip(source_models, source_seds, self.source_mags):
+        for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
             source.amp = 1.
             spix = source.pixeval(xl, yl)
             smodel = 0. * self.scistack
             for i in range(self.nbands):
                 scale = sed.scale(self.bands[i], self.main_band)
-                smodel[i*ny: (i+1)*ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
+                smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
                 mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
-            modlist.append((smodel/sigmastack).ravel()[maskstack_r])
+            modlist.append((smodel/self.errstack).ravel()[self.maskstack_r])
         
         modarr = np.array(modlist).T
         
-        amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[maskstack_r])
+        amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
 
         i = 0
         for light, mags in zip(self.light_sb_models, self.light_mags):
@@ -593,7 +595,7 @@ class PyPLZModel:
             for band in self.bands:
                 hdr['%s.mag_%s'%(source.name, band)] = mags[band]
                 scale = sed.scale(band, self.main_band)
-                source_ind_here = scale * convolve.convolve(spix, convol_matrix[band], False)[0]
+                source_ind_here = scale * convolve.convolve(spix, self.convol_matrix[band], False)[0]
     
                 source_ind_dic[band] = source_ind_here
     
