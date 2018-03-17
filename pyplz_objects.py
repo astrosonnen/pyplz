@@ -686,7 +686,7 @@ class PyPLZModel:
                         npar = self.par2index[lname]
                         conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             for band in self.bands:
-                conflines.append('mag_%s %3.2f\n'%(band, mags[ncomp][band]))
+                conflines.append('mag_%s %3.2f\n'%(band, mags[band]))
             ncomp += 1
         
         ncomp = 0
