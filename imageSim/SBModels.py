@@ -6,6 +6,7 @@ import os
 
 
 tempdir = os.environ.get('PYLENSDIR') + 'pylens/templates/'
+sersicpars = ['x', 'y', 'q', 're', 'pa', 'n']
 
 def cnts2mag(cnts,zp):
     from math import log10
