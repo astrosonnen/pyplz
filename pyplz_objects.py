@@ -475,9 +475,9 @@ class PyPLZModel:
             source = SBModels.Sersic('source%d'%ncomp, pars_here)
             self.source_sb_models.append(source)
             if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, filtdic, zp=zp)
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, filtdic, zp=self.zp)
             elif comp['sed'] == 'template':
-                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, zp=zp)
+                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, zp=self.zp)
             self.source_sed_models.append(sed)
             self.source_mags.append(fakemags)
          
