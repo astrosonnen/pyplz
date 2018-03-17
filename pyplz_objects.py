@@ -1,11 +1,12 @@
 import numpy as np
-from imageSimg import SBModels, SEDModels, convolve, plotting_tools
+from imageSim import SBModels, SEDModels, convolve, plotting_tools
 from pylens import pylens, MassModels
 from scipy.optimize import nnls
 from astropy.io import fits as pyfits
+import os
 
 
-rootdir = os.environ.get('PYLENSDIR')
+rootdir = os.environ.get('PYPLZDIR')
 
 def read_config(filename):
 
@@ -13,7 +14,7 @@ def read_config(filename):
     lines = f.readlines()
     f.close()
 
-    config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'filters': None, 'main_band': None, 'fitbands': None, \
+    config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'filters': None, 'main_band': None, \
               'zeropoints': None, \
               'filename': None, 'filter_prefix': '', 'filter_suffix': '', 'science_tag':'_sci.fits', 'err_tag':'_var.fits', 'err_type': 'VAR', 'psf_tag':'_psf.fits', \
               'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
@@ -30,25 +31,17 @@ def read_config(filename):
             if len(line) > 0:
                 parname = line[0].split(':')[0]
                 if parname in config:
-                    config[parname] = lines[i].split('#')[0].split(':')[1].split('\n')[0].lstrip().rstrip()
+                    config[parname] = lines[i].split('#')[0].split(':')[1].split('\n')[0].strip()
         i += 1
 
     filtlist = []
     filternames = config['filters'].split(',')
     for name in filternames:
-        filtlist.append(name.lstrip())
+        filtlist.append(name.strip())
     config['filters'] = filtlist
-    if config['fitbands'] is not None:
-        filtlist = []
-        filternames = config['fitbands'].split(',')
-        for name in filternames:
-            filtlist.append(name.lstrip())
-        config['fitbands'] = filtlist
-    else:
-        config['fitbands'] = config['filters']
 
     config['colors'] = []
-    for band in config['fitbands']:
+    for band in config['filters']:
         if band != config['main_band']:
             config['colors'].append('%s-%s'%(band, config['main_band']))
 
@@ -61,9 +54,6 @@ def read_config(filename):
         config['rgbcuts'] = cutlist
     else:
         config['rgbcuts'] = (99., 99., 99.)
-
-    if config['outname'] is None:
-        config['outname'] = configfile+'.output'
 
     config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
     config['Nsteps'] = int(config['Nsteps'])
@@ -123,7 +113,7 @@ def read_config(filename):
                     light_components.append(comp)
 
             elif line[0] == 'source_model':
-                model_class = line[1].lstrip()
+                model_class = line[1].strip()
                 sed_class = line[2]
 
                 if model_class == 'Sersic':
@@ -165,7 +155,7 @@ def read_config(filename):
                     source_components.append(comp)
 
             elif 'lens_model' in line[0]:
-                model_class = line[1].lstrip()
+                model_class = line[1].strip()
 
                 if model_class == 'Powerlaw':
                     npars = 6
@@ -249,16 +239,16 @@ class PyPLZModel:
         self.bands = []
         self.main_band = config['main_band']
 
-        filternames = config['filters'].split(',')
-        for name in filternames:
-            self.bands.append(name.strip())
+        for band in config['filters']:
+            self.bands.append(band)
 
         self.nbands = len(self.bands)
 
         # reads in data
     
         filtdic = {}
-        for band in self.bands:
+        for i in range(self.nbands):
+            band = self.bands[i]
         
             self.zp[band] = config['zeropoints'][i]
         
@@ -301,7 +291,7 @@ class PyPLZModel:
             psf -= m
             psf /= psf.sum()
         
-            self.convol_matrix[band] = convolve.convolve(images[band], psf)[1]
+            self.convol_matrix[band] = convolve.convolve(self.sci[band], psf)[1]
 
         # prepares mask and data array
 
@@ -330,8 +320,8 @@ class PyPLZModel:
         
         
         self.modelstack = np.zeros((self.nbands* ny, nx))
-        self.scistack = 0. * modelstack
-        self.errstack = 0. * modelstack
+        self.scistack = 0. * self.modelstack
+        self.errstack = 0. * self.modelstack
         self.maskstack = np.zeros((self.nbands * ny, nx), dtype=bool)
 
         for i in range(self.nbands):
@@ -339,7 +329,7 @@ class PyPLZModel:
             self.errstack[i*ny: (i+1)*ny, :] = self.err[self.bands[i]]
             self.maskstack[i*ny: (i+1)*ny, :] = mask
 
-        self.maskstack_r = maskstack.ravel()
+        self.maskstack_r = self.maskstack.ravel()
   
         #defines model parameters
         
@@ -386,8 +376,6 @@ class PyPLZModel:
         filtdic = {}
         fakemags = {}
         for band in config['filters']:
-        
-            zp[band] = config['zeropoints'][i]
         
             filtname = rootdir+'/filters/%s%s%s'%(config['filter_prefix'], band, config['filter_suffix'])
         
@@ -450,9 +438,9 @@ class PyPLZModel:
             self.light_sb_models.append(light)
 
             if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, zp)
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.zp)
             elif comp['sed'] == 'template':
-                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, zp)
+                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, self.zp)
             self.light_sed_models.append(sed)
             self.light_mags.append(fakemags)
 
@@ -653,7 +641,7 @@ class PyPLZModel:
             
             plotting_tools.make_full_rgb(sci_list, light_list, source_list, outname=rgbname)
 
-     def write_config_file(self, config, outname):
+    def write_config_file(self, config, outname):
     
         conflines = []
         confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'main_band', 'filter_prefix', 'filter_suffix']
