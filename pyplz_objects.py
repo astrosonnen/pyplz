@@ -696,7 +696,7 @@ class PyPLZModel:
             if comp['sed'] == 'freecolors':
                 sourcepars = SBModels.sersicpars + config['colors']
             elif comp['sed'] == 'template':
-                sourcepars = sersicpars + ['zs', 'tn']
+                sourcepars = SBModels.sersicpars + ['zs', 'tn']
     
             conflines.append('\n')
             conflines.append('source_model Sersic %s\n'%comp['sed'])
