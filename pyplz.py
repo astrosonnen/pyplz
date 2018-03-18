@@ -11,7 +11,7 @@ i = 1
 key = None
 saveind = None
 catlist = False
-dofit = True
+action = None
 while i <= nargv and not inputfound:
     argv = sys.argv[i]
     if argv[0] == '-':
@@ -20,14 +20,22 @@ while i <= nargv and not inputfound:
             saveind = int(sys.argv[i+1])
             inputfile = sys.argv[i+2]
             inputfound = True
-            dofit = False
         elif key == 'l':
             catlist = True
             inputfile = sys.argv[i+1]
             inputfound = True
+        elif key == 'o':
+            inputfile = sys.argv[i+1]
+            inputfound = True
+        elif key == 'M':
+            inputfile = sys.argv[i+1]
+            inputfound = True
+        else:
+            print 'unknown option -%s'%key
+            df
     else:
-        inputfile = argv
-        inputfound = True
+        print 'must specify mode: -s, -l, -o, -M'
+        df
     i += 1
 
 confnames = []
@@ -48,28 +56,37 @@ for configfile in confnames:
     config = pyplz_objects.read_config(configfile)
     model = pyplz_objects.PyPLZModel(config)
 
-    if dofit:
+    if key == 'M':
    
         chainname = config['output_dir']+configfile+'_chain.hdf5'
         pyplz_fitters.run_mcmc(model, chainname, config['Nwalkers'], config['Nsteps'])
 
         chain = h5py.File(chainname, 'r')
 
-        ind = chain['logp'].value.argmax()
+        ML = chain['logp'].value.argmax()
         modelname = config['output_dir']+configfile+'_ML'
+        for i in range(len(model.pars)):
+            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[ML]
+
+        model.update()
+        model.optimize_amp()
 
     elif key == 's':
     
         chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
 
         modelname = config['output_dir']+configfile+'_%06d'%ind
+        for i in range(len(model.pars)):
+            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[ind]
 
-    for i in range(len(model.pars)):
-        model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[ind]
-
-    model.update()
-    model.optimize_amp()
-    
+        model.update()
+        model.optimize_amp()
+ 
+    elif key == 'o':
+        
+        pyplz_fitters.optimize(model, config['Nsteps'])
+        modelname = config['output_dir']+configfile+'_optimized'
+   
     model.save(modelname)
     model.write_config_file(config, modelname)
 

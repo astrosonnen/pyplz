@@ -2,6 +2,7 @@ import emcee
 import numpy as np
 import h5py
 from scipy.stats import truncnorm
+from scipy.optimize import basinhopping
 
 
 def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
@@ -88,4 +89,53 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
     h5py_file = h5py.File(chainname, 'w')
     for par in outchain:
         h5py_file.create_dataset(par, data=outchain[par])
- 
+
+
+def optimize(model, niter=1000):
+
+    start = []
+    bounds = []
+    npars = len(model.pars)
+
+    for j in range(npars):
+        start.append(model.pars[j].value)
+        bounds.append((model.pars[j].lower, model.pars[j].upper))
+
+    start = np.array(start)
+    bounds = np.array(bounds)
+
+    scale_free_bounds = 0. * bounds
+    scale_free_bounds[:, 1] = 1.
+
+    scale_free_guess = (start - bounds[:, 0])/(bounds[:, 1] - bounds[:, 0])
+
+    minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=1.)
+
+    nlight = len(model.light_sb_models)
+    nsource = len(model.source_sb_models)
+    ncomp = nlight + nsource
+
+    def nlogpfunc(scaledp):
+
+        p = scaledp * (bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
+        for j in range(npars):
+            model.pars[j].value = p[j]
+
+        model.update()
+
+        chi2 = model.optimize_amp()
+
+        logp = -0.5*chi2
+
+        if logp != logp:
+            return np.inf
+
+        return -logp
+
+    res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, interval=30, T=3.)
+
+    ML_pars = res.x*(bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
+
+    for i in range(npars):
+        model.pars[i].value = ML_pars[i]
+
