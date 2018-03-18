@@ -13,7 +13,6 @@ filter_prefix: HSC-
 filter_suffix: .txt
 filters: g, r, i, z, y
 zeropoints: 27.000000, 27.000000, 27.000000, 27.000000, 27.000000
-fitbands: g, r, i, z, y
 
 # MODELS
 
