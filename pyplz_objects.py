@@ -234,6 +234,8 @@ class PyPLZModel:
 
         self.lens_models = []
 
+        self.logp = None
+
         # defines bands 
 
         self.bands = []
@@ -335,10 +337,6 @@ class PyPLZModel:
   
         #defines model parameters
         
-        nlight = len(config['light_components'])
-        nsource = len(config['source_components'])
-        nlens = len(config['lens_components'])
-        
         ncomp = 0
         npar = 0
         for comp in config['light_components']:
@@ -376,7 +374,6 @@ class PyPLZModel:
         i = 0
         
         filtdic = {}
-        fakemags = {}
         for band in config['filters']:
         
             filtname = rootdir+'/filters/%s%s%s'%(config['filter_prefix'], band, config['filter_suffix'])
@@ -386,7 +383,6 @@ class PyPLZModel:
             f.close()
         
             filtdic[band] = (ftable[:, 0], ftable[:, 1])
-            fakemags[band] = 99.
         
         ncomp = 1
         for comp in config['lens_components']:
@@ -410,6 +406,8 @@ class PyPLZModel:
             lens = MassModels.PowerLaw(name, pars_here)
             self.lens_models.append(lens)
         
+        self.nlens = len(self.lens_models)
+
         ncomp = 1
 
         for comp in config['light_components']:
@@ -444,10 +442,12 @@ class PyPLZModel:
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, self.zp)
             self.light_sed_models.append(sed)
-            self.light_mags.append(fakemags)
+            self.light_mags.append({})
 
             ncomp += 1
          
+        self.nlight = len(self.light_sb_models)
+
         ncomp = 1
         for comp in config['source_components']:
         
@@ -479,9 +479,11 @@ class PyPLZModel:
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, zp=self.zp)
             self.source_sed_models.append(sed)
-            self.source_mags.append(fakemags)
+            self.source_mags.append({})
          
             ncomp += 1
+
+        self.nsource = len(self.source_sb_models)
 
     def update(self):
 
@@ -509,29 +511,29 @@ class PyPLZModel:
         
         modlist = []
 
-        for light, sed, mags in zip(self.light_sb_models, self.light_sed_models, self.light_mags):
-            light.amp = 1.
-            lpix = light.pixeval(self.X, self.Y)
+        for n in range(self.nlight):
+            self.light_sb_models[n].amp = 1.
+            lpix = self.light_sb_models[n].pixeval(self.X, self.Y)
             lmodel = 0. * self.scistack
             for i in range(self.nbands):
-                scale = sed.scale(self.bands[i], self.main_band)
+                scale = self.light_sed_models[n].scale(self.bands[i], self.main_band)
                 lmodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(lpix, self.convol_matrix[self.bands[i]], False)[0]
-                mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                self.light_mags[n][self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
     
             modlist.append((lmodel/self.errstack).ravel()[self.maskstack_r])
-    
-        for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
-            source.amp = 1.
-            spix = source.pixeval(xl, yl)
+
+        for n in range(self.nsource):
+            self.source_sb_models[n].amp = 1.
+            spix = self.source_sb_models[n].pixeval(xl, yl)
             smodel = 0. * self.scistack
             for i in range(self.nbands):
-                scale = sed.scale(self.bands[i], self.main_band)
+                scale = self.source_sed_models[n].scale(self.bands[i], self.main_band)
                 smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
-                mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                self.source_mags[n][self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
             modlist.append((smodel/self.errstack).ravel()[self.maskstack_r])
         
         modarr = np.array(modlist).T
-        
+
         amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
 
         i = 0
@@ -551,12 +553,13 @@ class PyPLZModel:
                 source.amp *= amps[i]
                 mainmag = source.Mag(self.zp[self.main_band])
                 for band in self.bands:
-                    mags[band] += mainmag
+                    mags[band] = mags[band] + mainmag
             else:
                 for band in self.bands:
                     mags[band] = 99.
             i += 1
- 
+
+        self.logp = -0.5*chi**2
         return chi**2
 
     def save(self, outname, make_rgb=True):
@@ -738,6 +741,7 @@ class PyPLZModel:
             ncomp += 1
         
         conflines.append('\n')
+        conflines.append('logp %f\n'%self.logp)
 
         f = open(outname, 'w')
         f.writelines(conflines)
