@@ -58,6 +58,8 @@ def read_config(filename):
     config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
     config['Nsteps'] = int(config['Nsteps'])
     config['Nwalkers'] = int(config['Nwalkers'])
+    if config['burnin'] is not None:
+        config['burnin'] = int(config['burnin'])
     config['rmax'] = float(config['rmax'])
 
     light_components = []
@@ -671,7 +673,7 @@ class PyPLZModel:
     def write_config_file(self, config, outname):
     
         conflines = []
-        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'main_band', 'filter_prefix', 'filter_suffix']
+        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
         for parname in confpars:
             if config[parname] is not None:
                 conflines.append('%s: %s\n'%(parname, config[parname]))
