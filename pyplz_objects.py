@@ -562,6 +562,28 @@ class PyPLZModel:
         self.logp = -0.5*chi**2
         return chi**2
 
+    def get_restUV_mags(self):
+
+        light_mags = []
+        for light, sed in zip(self.light_sb_models, self.light_sed_models):
+            mainmag = light.Mag(self.zp[self.main_band])
+            scale = sed.restUV_scale(self.main_band)
+            if scale is not None:
+                light_mags.append(mainmag - 2.5*np.log10(scale))
+            else:
+                light_mags.append(None)
+
+        source_mags = []
+        for source, sed in zip(self.source_sb_models, self.source_sed_models):
+            mainmag = source.Mag(self.zp[self.main_band])
+            scale = sed.restUV_scale(self.main_band)
+            if scale is not None:
+                source_mags.append(mainmag - 2.5*np.log10(scale))
+            else:
+                source_mags.append(None)
+
+        return light_mags, source_mags
+
     def save(self, outname, make_rgb=True):
     
         fitsname = outname+'.fits'
@@ -666,8 +688,10 @@ class PyPLZModel:
         conflines.append('\n')
         conflines.append('# MODELS\n')
 
+        light_uvmags, source_uvmags = self.get_restUV_mags()
+
         ncomp = 0
-        for comp, mags in zip(config['light_components'], self.light_mags):
+        for comp, mags, uvmag in zip(config['light_components'], self.light_mags, light_uvmags):
     
             if comp['sed'] == 'freecolors':
                 lightpars = SBModels.sersicpars + config['colors']
@@ -690,11 +714,12 @@ class PyPLZModel:
                         conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             for band in self.bands:
                 conflines.append('mag_%s %3.2f\n'%(band, mags[band]))
+            conflines.append('uvmag %3.2f\n'%uvmag)
             ncomp += 1
         
         ncomp = 0
     
-        for comp, mags in zip(config['source_components'], self.source_mags):
+        for comp, mags, uvmag in zip(config['source_components'], self.source_mags, source_uvmags):
     
             if comp['sed'] == 'freecolors':
                 sourcepars = SBModels.sersicpars + config['colors']
@@ -717,6 +742,7 @@ class PyPLZModel:
                         conflines.append('%s %f %f %f %f 1\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             for band in self.bands:
                 conflines.append('mag_%s %3.2f\n'%(band, mags[band]))
+            conflines.append('uvmag %3.2f\n'%uvmag)
     
             ncomp += 1
         

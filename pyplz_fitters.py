@@ -3,12 +3,28 @@ import numpy as np
 import h5py
 from scipy.stats import truncnorm
 from scipy.optimize import basinhopping
+from scipy.interpolate import splrep, splev, splint
+import luminosity_functions
+from luminosity_functions import omegaL, omegaM
 
 
+nz = 101
+z_grid = np.linspace(0., 5., nz)
+comovd_grid = 0. * z_grid
+for i in range(nz):
+    comovd_grid[i] = luminosity_functions.comovd(z_grid[i])
+
+comovd_spline = splrep(z_grid, comovd_grid)
+ 
 def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
 
     start = []
     npars = len(model.pars)
+
+    light_photoz_zgrids = {}
+    source_photoz_zgrids = {}
+    light_photoz_dgrids = {}
+    source_photoz_dgrids = {}
 
     for j in range(npars):
 
@@ -18,22 +34,50 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
 
     start = np.array(start).T
 
+    # checks if there are photoz-s among the free parameters, and prepares grids
+    for n in range(model.nlight):
+        parname = 'light%d.zs'%(n+1)
+        if parname in model.par2index:
+            zgrid_here = np.linspace(max(0.001, model.pars[model.par2index[parname]].lower), model.pars[model.par2index[parname]].upper, nz)
+            dgrid_here = 0. * zgrid_here
+            light_photoz_zgrids[n] = zgrid_here
+            for i in range(nz):
+                dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+            light_photoz_dgrids[n] = dgrid_here
+
+    for n in range(model.nsource):
+        parname = 'source%d.zs'%(n+1)
+        if parname in model.par2index:
+            zgrid_here = np.linspace(max(0.001, model.pars[model.par2index[parname]].lower), model.pars[model.par2index[parname]].upper, nz)
+            dgrid_here = 0. * zgrid_here
+            source_photoz_zgrids[n] = zgrid_here
+            for i in range(nz):
+                dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+            source_photoz_dgrids[n] = dgrid_here
+
     def logprior(allpars):
         for i in range(npars):
             if allpars[i] < model.pars[i].lower or allpars[i] > model.pars[i].upper:
                 return -np.inf
         return 0.
 
-    nlight = len(model.light_sb_models)
-    nsource = len(model.source_sb_models)
-    ncomp = nlight + nsource
-
     fakemags = []
 
-    for i in range(ncomp):
+    for i in range(model.nlight):
         magdic = {}
         for band in model.bands:
             magdic[band] = 99.
+        if i in light_photoz_zgrids:
+            magdic['UV'] = 99.
+        fakemags.append(magdic)
+    fakemags.append(-np.inf)
+
+    for i in range(model.nsource):
+        magdic = {}
+        for band in model.bands:
+            magdic[band] = 99.
+        if i in source_photoz_zgrids:
+            magdic['UV'] = 99.
         fakemags.append(magdic)
 
     def logpfunc(allpars):
@@ -47,13 +91,41 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
         model.update()
 
         chi2 = model.optimize_amp()
-
         logp = -0.5*chi2
+
+        light_uvmags, source_uvmags = model.get_restUV_mags()
+
+        for lcomp in light_photoz_zgrids:
+            Mgrid_here = light_uvmags[lcomp] - 5.*np.log10(splev(light_photoz_zgrids[lcomp], comovd_spline)*(1.+light_photoz_zgrids[lcomp])*1e5)
+            integrand_grid = 1./(omegaL + omegaM*(1.+light_photoz_zgrids[lcomp])**3)**0.5 * light_photoz_dgrids[lcomp]**2 * luminosity_functions.phi(Mgrid_here, light_photoz_zgrids[lcomp])
+            integrand_spline = splrep(light_photoz_zgrids[lcomp], integrand_grid)
+            norm = splint(light_photoz_zgrids[lcomp][0], light_photoz_zgrids[lcomp][-1], integrand_spline)
+            Muv = light_uvmags[lcomp] - 5.*np.log10(splev(model.light_sed_models[lcomp].zs, comovd_spline)*(1.+model.light_sed_models[lcomp].zs)*1e5)
+            model.light_mags[lcomp]['UV'] = Muv
+
+            prior = luminosity_functions.phi(Muv, model.light_sed_models[lcomp].zs) * 1./(omegaL + omegaM*(1.+model.light_sed_models[lcomp].zs)**3)**0.5 * splev(model.light_sed_models[lcomp].zs, comovd_spline)**2 / norm
+            logp += np.log(prior)
 
         if logp != logp:
             return -np.inf, fakemags
 
-        return logp, model.light_mags + model.source_mags
+        allmags = []
+
+        for i in range(model.nlight):
+            magdic = {}
+            for band in model.light_mags[i]:
+                magdic[band] = model.light_mags[i][band]
+            allmags.append(magdic)
+    
+        for i in range(model.nsource):
+            magdic = {}
+            for band in model.source_mags[i]:
+                magdic[band] = model.source_mags[i][band]
+            allmags.append(magdic)
+
+        allmags.append(np.log(prior))
+     
+        return logp, allmags
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
@@ -70,22 +142,34 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
     for i in range(npars):
         outchain[model.index2par[i]] = chain[:, :, i]
 
-    for i in range(nlight):
+    for i in range(model.nlight):
         for band in model.bands:
             outchain['light%d.mag_%s'%(i+1, band)] = np.zeros((nwalkers, nsteps))
+        if i in light_photoz_zgrids:
+            outchain['light%d.M_UV'%(i+1)] = np.zeros((nwalkers, nsteps))
 
-    for i in range(nsource):
+    for i in range(model.nsource):
         for band in model.bands:
             outchain['source%d.mag_%s'%(i+1, band)] = np.zeros((nwalkers, nsteps))
+        if i in source_photoz_zgrids:
+            outchain['source%d.M_UV'%(i+1)] = np.zeros((nwalkers, nsteps))
+
+    outchain['loguvprior'] = np.zeros((nwalkers, nsteps))
 
     for i in range(nsteps):
         for j in range(nwalkers):
             for band in model.bands:
-                for l in range(nlight):
+                for l in range(model.nlight):
                     outchain['light%d.mag_%s'%(l+1, band)][j, i] = magschain[i][j][l][band]
-                for s in range(nsource):
+                for s in range(model.nsource):
                     outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][nlight+s][band]
-    
+            for n in light_photoz_zgrids:
+                outchain['light%d.M_UV'%(n+1)][j, i] = magschain[i][j][n]['UV']
+            for n in source_photoz_zgrids:
+                outchain['source%d.M_UV'%(n+1)][j, i] = magschain[i][j][nlight+n]['UV']
+
+            outchain['loguvprior'][j, i] = magschain[i][j][-1]
+     
     h5py_file = h5py.File(chainname, 'w')
     for par in outchain:
         h5py_file.create_dataset(par, data=outchain[par])
@@ -109,11 +193,9 @@ def optimize(model, niter=1000):
 
     scale_free_guess = (start - bounds[:, 0])/(bounds[:, 1] - bounds[:, 0])
 
-    minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=1.)
+    minimizer_kwargs = dict(method="L-BFGS-B", bounds=scale_free_bounds, tol=100.)
 
-    nlight = len(model.light_sb_models)
-    nsource = len(model.source_sb_models)
-    ncomp = nlight + nsource
+    ncomp = model.nlight + model.nsource
 
     def nlogpfunc(scaledp):
 
@@ -132,7 +214,7 @@ def optimize(model, niter=1000):
 
         return -logp
 
-    res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, interval=30, T=3.)
+    res = basinhopping(nlogpfunc, scale_free_guess, stepsize=0.1, niter=niter, minimizer_kwargs=minimizer_kwargs, interval=50, T=1.)
 
     ML_pars = res.x*(bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
 
