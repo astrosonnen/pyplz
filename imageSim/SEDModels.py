@@ -78,6 +78,9 @@ class Colors:
             col = self.__dict__['%s-%s'%(band2, band1)]
             return 10.**(-(col - self.zp[band2] + self.zp[band1])/2.5)
 
+    def restUV_scale(self, refband):
+        return None
+
 
 class Template:
 
@@ -176,4 +179,57 @@ class Template:
 
         return ratio * 10.**((self.zp[band2] - self.zp[band1])/2.5)
 
+    def restUV_scale(self, refband, uvrange=(1500., 1700.), madau=True):
+        zs = self.zs
+
+        a2 = self.tn%1
+        a1 = 1. - a2
+        n1 = int(np.floor(self.tn))
+        n2 = int(np.ceil(self.tn))
+
+        temp_coeffs = [a1, a2]
+        temp_ind = [n1, n2]
+
+        temp_fnus = []
+        for n in temp_ind:
+
+            flambda = self.templates[n][1].copy()
+            wav = self.templates[n][0].copy()
+
+            wobs = wav * (1. + zs)
+
+            fnus_here = []
+
+            # computes fnu at rest-frame UV
+
+            wuvrange = (wav > uvrange[0]) & (wav < uvrange[1])
+            wuvband = wobs[wuvrange]
+            fuvband = flambda[wuvrange]
+
+            if madau:
+                madau_corr = etau_madau(wuvband, zs)
+                fuvband *= madau_corr
+
+            fuvnu = fuvband * wuvband**2
+            fnus_here.append(np.median(fuvnu))
+
+            # computes fnu in reference filter
+
+            wrefrange = (wobs > self.filtranges[refband][0]) & (wobs < self.filtranges[refband][1])
+            wrefband = wobs[wrefrange]
+            frefband = flambda[wrefrange]
+
+            if madau:
+                madau_corr = etau_madau(wrefband, zs)
+                frefband *= madau_corr
+
+            frefnu = frefband * wrefband**2
+            weights = splev(wrefband, self.filtsplines[refband])
+            fnus_here.append((frefnu * weights).sum()/weights.sum())
+
+            temp_fnus.append(fnus_here)
+
+        ratio = (a1 * temp_fnus[0][0] + a2 * temp_fnus[1][0]) / (a1 * temp_fnus[0][1] + a2 * temp_fnus[1][1])
+
+        return ratio 
 
