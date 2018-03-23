@@ -535,8 +535,11 @@ class PyPLZModel:
             modlist.append((smodel/self.errstack).ravel()[self.maskstack_r])
         
         modarr = np.array(modlist).T
-
-        amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
+        if np.isnan(modarr).any() or not np.isfinite(modarr).any():
+            amps = np.ones(self.nlight + self.nsource)
+            chi = 1e300
+        else:
+            amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
 
         i = 0
         for light, mags in zip(self.light_sb_models, self.light_mags):
@@ -767,7 +770,7 @@ class PyPLZModel:
                     else:
                         lname = config['lens_components'][ncomp]['pars'][par]['link']
                         npar = self.par2index[lname]
-                        conflines.append('%s %f %f %f %f 1\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
+                        conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             ncomp += 1
         
         conflines.append('\n')
