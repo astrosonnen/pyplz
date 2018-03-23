@@ -170,11 +170,11 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 for l in range(model.nlight):
                     outchain['light%d.mag_%s'%(l+1, band)][j, i] = magschain[i][j][l][band]
                 for s in range(model.nsource):
-                    outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][nlight+s][band]
+                    outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][model.nlight+s][band]
             for n in light_photoz_zgrids:
                 outchain['light%d.M_UV'%(n+1)][j, i] = magschain[i][j][n]['UV']
             for n in source_photoz_zgrids:
-                outchain['source%d.M_UV'%(n+1)][j, i] = magschain[i][j][nlight+n]['UV']
+                outchain['source%d.M_UV'%(n+1)][j, i] = magschain[i][j][model.nlight+n]['UV']
 
     h5py_file = h5py.File(chainname, 'w')
     for par in outchain:
