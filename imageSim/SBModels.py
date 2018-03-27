@@ -6,15 +6,15 @@ import os
 
 
 tempdir = os.environ.get('PYLENSDIR') + 'pylens/templates/'
-parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PSF': ['x', 'y']}
+parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PointSource': ['x', 'y']}
 
-def cnts2mag(cnts,zp):
+def cnts2mag(cnts, zp):
     from math import log10
     return -2.5*log10(cnts) + zp
 
 
 class SBModel:
-    def __init__(self,name,pars,convolve=0):
+    def __init__(self, name, pars, convolve=0):
         if 'amp' not in pars.keys() and 'logamp' not in pars.keys():
             pars['amp'] = 1.
         self.keys = pars.keys()
@@ -57,6 +57,40 @@ class SBModel:
         for key in self.vmap:
             self.__setattr__(key,self.vmap[key].value)
 
+class PixelizedModel:
+    def __init__(self, psfs):
+        self.psfs = {}
+        for band in psfs:
+            self.psfs[band] = psfs[band].copy()
+            self.psfs[band] /= psfs[band].sum()
+        self.setCentroid()
+        self.createModel()
+        self.x = None
+        self.y = None
+        self.amp = 1.
+
+    def setCentroid(self):
+        self.x0 = {}
+        self.y0 = {}
+        for band in self.psfs:
+            y, x = np.indices(self.psfs.shape).astype(np.float32)
+            self.x0[band] = (x*self.psfs[band]).sum()
+            self.y0[band] = (y*self.psfs[band]).sum()
+
+    def createModel(self, order=1):
+        if order==1:
+            self.model = self.image.copy()
+        else:
+            self.model = ndimage.spline_filter(self.image, output=np.float64, order=order)
+        self.order = order
+
+    def pixeval(self, x, y, band):
+        X = x-self.x+self.x0
+        Y = y-self.y+self.y0
+        psf = ndimage.map_coordinates(self.model[band], [Y,X], prefilter=False)
+        psf /= psf.sum()
+        return self.amp*psf
+
 
 class Sersic(SBModel,SBProfiles.Sersic):
     _baseProfile = SBProfiles.Sersic
@@ -80,5 +114,45 @@ class Sersic(SBModel,SBProfiles.Sersic):
     def Mag(self,zp):
         return self.getMag(self.amp,zp)
 
+
+class PointSource(PixelizedModel):
+    def __init__(self, name, model, pars):
+        if 'amp' not in pars.keys():
+            pars['amp'] = 1.
+        self.keys = pars.keys()
+        self.keys.sort()
+        if self.keys!=['amp', 'x', 'y']:
+            import sys
+            print 'Not all (or too many) parameters were defined!'
+            print self.keys
+            sys.exit()
+        PM.__init__(self, model)
+        self.vmap = {}
+        self.pars = pars
+        for key in self.keys:
+            try:
+                v = self.pars[key].value
+                self.vmap[key] = self.pars[key]
+            except:
+                self.__setattr__(key,self.pars[key])
+        self.setPars()
+        self.name = name
+
+    def __setattr__(self,key,value):
+        if key=='logamp':
+            if value is not None:
+                self.__dict__['amp'] = 10**value
+        else:
+            self.__dict__[key] = value
+
+    def setPars(self):
+        for key in self.vmap:
+            self.__setattr__(key,self.vmap[key].value)
+
+    def getMag(self,amp,zp):
+        return cnts2mag(amp,zp)
+
+    def Mag(self,zp):
+        return self.getMag(self.amp,zp)
 
 

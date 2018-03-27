@@ -74,8 +74,10 @@ def read_config(filename):
                 model_class = line[1]
                 sed_class = line[2]
 
-                if model_class == 'Sersic':
-                    parnames = ['x', 'y', 'q', 'pa', 're', 'n']
+                if model_class in SBModels.parlists:
+                    parnames = []
+                    for parname in SBModels.parlists[model_class]:
+                        parnames.append(parname)
                 else:
                     df
 
@@ -118,8 +120,10 @@ def read_config(filename):
                 model_class = line[1].strip()
                 sed_class = line[2]
 
-                if model_class == 'Sersic':
-                    parnames = ['x', 'y', 'q', 'pa', 're', 'n']
+                if model_class in ['Sersic']:
+                    parnames = []
+                    for parname in SBModels.parlists[model_class]:
+                        parnames.append(parname)
                 else:
                     df
 
@@ -324,7 +328,6 @@ class PyPLZModel:
         mask = MASK > 0
         mask_r = mask.ravel()
         
-        
         self.modelstack = np.zeros((self.nbands* ny, nx))
         self.scistack = 0. * self.modelstack
         self.errstack = 0. * self.modelstack
@@ -419,7 +422,7 @@ class PyPLZModel:
             pars_here = {}
             sed_here = {}
             for par in comp['pars']:
-                if par in SBModels.sersicpars:
+                if par in SBModels.parlists[comp['class']]:
                     if comp['pars'][par]['link'] is None:
                         if comp['pars'][par]['var'] == 1:
                             pars_here[par] = self.pars[self.par2index[name+'.'+par]]
@@ -436,7 +439,13 @@ class PyPLZModel:
                     else:
                         sed_here[par] = self.pars[self.par2index[comp['pars'][par]['link']]]
         
-            light = SBModels.Sersic('light%d'%ncomp, pars_here)
+            if comp['class'] == 'Sersic':
+                light = SBModels.Sersic('light%d'%ncomp, pars_here)
+            elif comp['class'] == 'PointSource':
+                light = SBModels.PointSource('light%d'%ncomp, pars_here)
+            else:
+                df
+
             self.light_sb_models.append(light)
 
             if comp['sed'] == 'freecolors':
@@ -457,7 +466,7 @@ class PyPLZModel:
         
             pars_here = {}
             for par in comp['pars']:
-                if par in SBModels.sersicpars:
+                if par in SBModels.parlists['Sersic']:
                     if comp['pars'][par]['link'] is None:
                         if comp['pars'][par]['var'] == 1:
                             pars_here[par] = self.pars[self.par2index[name+'.'+par]]
@@ -474,7 +483,11 @@ class PyPLZModel:
                     else:
                         sed_here[par] = self.pars[self.par2index[comp['pars'][par]['link']]]
 
-            source = SBModels.Sersic('source%d'%ncomp, pars_here)
+            if comp['class'] == 'Sersic':
+                source = SBModels.Sersic('source%d'%ncomp, pars_here)
+            else:
+                df
+
             self.source_sb_models.append(source)
             if comp['sed'] == 'freecolors':
                 sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, zp=self.zp)
@@ -513,25 +526,30 @@ class PyPLZModel:
         
         modlist = []
 
-        for n in range(self.nlight):
-            self.light_sb_models[n].amp = 1.
-            lpix = self.light_sb_models[n].pixeval(self.X, self.Y)
+        for light, sed, mags in zip(self.light_sb_models, self.light_sed_models, self.light_mags):
             lmodel = 0. * self.scistack
-            for i in range(self.nbands):
-                scale = self.light_sed_models[n].scale(self.bands[i], self.main_band)
-                lmodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(lpix, self.convol_matrix[self.bands[i]], False)[0]
-                self.light_mags[n][self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
-    
+            light.amp = 1.
+            if light.__class__.__name__ == 'PointSource':
+                for i in range(self.nbands):
+                    scale = sed.scale(self.bands[i], self.main_band)
+                    lmodel[i*self.ny: (i+1)*self.ny, :] = light.pixeval(self.X, self.Y)
+                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+            else:
+                lpix = light.pixeval(self.X, self.Y)
+                for i in range(self.nbands):
+                    scale = sed.scale(self.bands[i], self.main_band)
+                    lmodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(lpix, self.convol_matrix[self.bands[i]], False)[0]
+                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
             modlist.append((lmodel/self.errstack).ravel()[self.maskstack_r])
 
-        for n in range(self.nsource):
-            self.source_sb_models[n].amp = 1.
-            spix = self.source_sb_models[n].pixeval(xl, yl)
+        for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
             smodel = 0. * self.scistack
+            source.amp = 1.
+            spix = smodel.pixeval(xl, yl)
             for i in range(self.nbands):
-                scale = self.source_sed_models[n].scale(self.bands[i], self.main_band)
+                scale = sed.scale(self.bands[i], self.main_band)
                 smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
-                self.source_mags[n][self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
             modlist.append((smodel/self.errstack).ravel()[self.maskstack_r])
         
         modarr = np.array(modlist).T
@@ -606,11 +624,17 @@ class PyPLZModel:
         
             light_ind_dic = {}
     
-            lpix = light.pixeval(self.X, self.Y)
-            for band in self.bands:
-                hdr['%s.mag_%s'%(light.name, band)] = mags[band]
-                scale = sed.scale(band, self.main_band)
-                light_ind_dic[band] = scale * convolve.convolve(lpix, self.convol_matrix[band], False)[0]
+            if light.__class__.__name__ == 'PointSource':
+                for band in self.bands:
+                    hdr['%s.mag_%s'%(light.name, band)] = mags[band]
+                    scale = sed.scale(band, self.main_band)
+                    light_ind_dic[band] = scale * light.pixeval(self.X, self.Y) 
+            else:
+                lpix = light.pixeval(self.X, self.Y)
+                for band in self.bands:
+                    hdr['%s.mag_%s'%(light.name, band)] = mags[band]
+                    scale = sed.scale(band, self.main_band)
+                    light_ind_dic[band] = scale * convolve.convolve(lpix, self.convol_matrix[band], False)[0]
     
             light_ind_model.append(light_ind_dic)
     
@@ -699,12 +723,12 @@ class PyPLZModel:
         for comp, mags, uvmag in zip(config['light_components'], self.light_mags, light_uvmags):
     
             if comp['sed'] == 'freecolors':
-                lightpars = SBModels.sersicpars + config['colors']
+                lightpars = SBModels.parlists[comp['class']] + config['colors']
             elif comp['sed'] == 'template':
-                lightpars = SBModels.sersicpars + ['zs', 'tn']
+                lightpars = SBModels.parlists[comp['class']] + ['zs', 'tn']
     
             conflines.append('\n')
-            conflines.append('light_model Sersic %s\n'%comp['sed'])
+            conflines.append('light_model %s %s\n'%(comp['class'], comp['sed']))
             for par in lightpars:
                 parname = 'light%d.%s'%(ncomp+1, par)
                 if parname in self.par2index:
@@ -728,9 +752,9 @@ class PyPLZModel:
         for comp, mags, uvmag in zip(config['source_components'], self.source_mags, source_uvmags):
     
             if comp['sed'] == 'freecolors':
-                sourcepars = SBModels.sersicpars + config['colors']
+                sourcepars = SBModels.parlists['Sersic'] + config['colors']
             elif comp['sed'] == 'template':
-                sourcepars = SBModels.sersicpars + ['zs', 'tn']
+                sourcepars = SBModels.parlists['Sersic'] + ['zs', 'tn']
     
             conflines.append('\n')
             conflines.append('source_model Sersic %s\n'%comp['sed'])
