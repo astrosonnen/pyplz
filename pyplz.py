@@ -30,6 +30,9 @@ while i <= nargv and not inputfound:
         elif key == 'M':
             inputfile = sys.argv[i+1]
             inputfound = True
+        elif key == 'p':
+            inputfile = sys.argv[i+1]
+            inputfound = True
         else:
             print 'unknown option -%s'%key
             df
@@ -56,7 +59,7 @@ for configfile in confnames:
     config = pyplz_objects.read_config(configfile)
     model = pyplz_objects.PyPLZModel(config)
 
-    if key == 'M':
+    if key == 'M' or key == 'l':
    
         chainname = config['output_dir']+configfile+'_chain.hdf5'
         pyplz_fitters.run_mcmc(model, chainname, config['Nwalkers'], config['Nsteps'])
@@ -71,13 +74,28 @@ for configfile in confnames:
         model.update()
         model.optimize_amp()
 
+    elif key == 'p':
+   
+        chainname = config['output_dir']+configfile+'_pymcchain.hdf5'
+        pyplz_fitters.run_pymc(model, chainname, nsteps=config['Nsteps'], burnin=config['burnin'])
+
+        chain = h5py.File(chainname, 'r')
+
+        ML = chain['logp'].value.argmax()
+        modelname = config['output_dir']+configfile+'_ML'
+        for i in range(len(model.pars)):
+            model.pars[i].value = chain['%s'%model.index2par[i]].value[ML]
+
+        model.update()
+        model.optimize_amp()
+
     elif key == 's':
     
         chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
 
-        modelname = config['output_dir']+configfile+'_%06d'%ind
+        modelname = config['output_dir']+configfile+'_%06d'%saveind
         for i in range(len(model.pars)):
-            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[ind]
+            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[saveind]
 
         model.update()
         model.optimize_amp()

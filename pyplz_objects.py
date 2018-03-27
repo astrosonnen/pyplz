@@ -545,7 +545,7 @@ class PyPLZModel:
         for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
             smodel = 0. * self.scistack
             source.amp = 1.
-            spix = smodel.pixeval(xl, yl)
+            spix = source.pixeval(xl, yl)
             for i in range(self.nbands):
                 scale = sed.scale(self.bands[i], self.main_band)
                 smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
