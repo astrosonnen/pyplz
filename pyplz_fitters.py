@@ -71,7 +71,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
         if i in light_photoz_zgrids:
             magdic['UV'] = 99.
         fakemags.append(magdic)
-    fakemags.append(-np.inf)
+    for l in light_photoz_zgrids:
+        fakemags.append(-np.inf)
 
     for i in range(model.nsource):
         magdic = {}
@@ -80,6 +81,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
         if i in source_photoz_zgrids:
             magdic['UV'] = 99.
         fakemags.append(magdic)
+    for s in source_photoz_zgrids:
+        fakemags.append(-np.inf)
 
     def logpfunc(allpars):
         lp = logprior(allpars)
@@ -96,6 +99,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
 
         light_uvmags, source_uvmags = model.get_restUV_mags()
 
+        alluvpriors = []
+
         for lcomp in light_photoz_zgrids:
             Mgrid_here = light_uvmags[lcomp] - 5.*np.log10(splev(light_photoz_zgrids[lcomp], comovd_spline)*(1.+light_photoz_zgrids[lcomp])*1e5)
             integrand_grid = 1./(omegaL + omegaM*(1.+light_photoz_zgrids[lcomp])**3)**0.5 * light_photoz_dgrids[lcomp]**2 * luminosity_functions.phi(Mgrid_here, light_photoz_zgrids[lcomp])
@@ -105,6 +110,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
             model.light_mags[lcomp]['UV'] = Muv
 
             prior = luminosity_functions.phi(Muv, model.light_sed_models[lcomp].zs) * 1./(omegaL + omegaM*(1.+model.light_sed_models[lcomp].zs)**3)**0.5 * splev(model.light_sed_models[lcomp].zs, comovd_spline)**2 / norm
+            alluvpriors.append(np.log(prior))
             logp += np.log(prior)
 
         for scomp in source_photoz_zgrids:
@@ -116,6 +122,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
             model.source_mags[scomp]['UV'] = Muv
 
             prior = luminosity_functions.phi(Muv, model.source_sed_models[scomp].zs) * 1./(omegaL + omegaM*(1.+model.source_sed_models[scomp].zs)**3)**0.5 * splev(model.source_sed_models[scomp].zs, comovd_spline)**2 / norm
+            alluvpriors.append(np.log(prior))
             logp += np.log(prior)
 
         if logp != logp:
@@ -135,7 +142,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 magdic[band] = model.source_mags[i][band]
             allmags.append(magdic)
      
-        return logp, allmags
+        return logp, allmags + alluvpriors
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
@@ -157,12 +164,14 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
             outchain['light%d.mag_%s'%(i+1, band)] = np.zeros((nwalkers, nsteps))
         if i in light_photoz_zgrids:
             outchain['light%d.M_UV'%(i+1)] = np.zeros((nwalkers, nsteps))
+            outchain['light%d.loguvprior'%(i+1)] = np.zeros((nwalkers, nsteps))
 
     for i in range(model.nsource):
         for band in model.bands:
             outchain['source%d.mag_%s'%(i+1, band)] = np.zeros((nwalkers, nsteps))
         if i in source_photoz_zgrids:
             outchain['source%d.M_UV'%(i+1)] = np.zeros((nwalkers, nsteps))
+            outchain['source%d.loguvprior'%(i+1)] = np.zeros((nwalkers, nsteps))
 
     for i in range(nsteps):
         for j in range(nwalkers):
@@ -173,8 +182,10 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                     outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][model.nlight+s][band]
             for n in light_photoz_zgrids:
                 outchain['light%d.M_UV'%(n+1)][j, i] = magschain[i][j][n]['UV']
+                outchain['light%d.loguvprior'%(n+1)][j, i] = magschain[i][j][model.nlight+model.nsource+n]
             for n in source_photoz_zgrids:
                 outchain['source%d.M_UV'%(n+1)][j, i] = magschain[i][j][model.nlight+n]['UV']
+                outchain['source%d.loguvprior'%(n+1)][j, i] = magschain[i][j][model.nlight+model.nsource+len(light_photoz_zgrids)+n]
 
     h5py_file = h5py.File(chainname, 'w')
     for par in outchain:
