@@ -189,11 +189,6 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
         if i in source_photoz_zgrids:
             outchain['source%d.loguvprior'%(i+1)] = np.zeros((nwalkers, nsteps))
 
-    print magschain[0][0][0]
-    print magschain[0][0][1]
-    print magschain[0][0][2]
-    print magschain[0][0][3]
-
     for i in range(nsteps):
         for j in range(nwalkers):
             for band in model.bands:
