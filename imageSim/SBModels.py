@@ -2,6 +2,7 @@ import SBProfiles as SBProfiles
 from math import pi
 import numpy as np
 from scipy.interpolate import splrep, splev
+from scipy import ndimage
 import os
 
 
@@ -73,20 +74,22 @@ class PixelizedModel:
         self.x0 = {}
         self.y0 = {}
         for band in self.psfs:
-            y, x = np.indices(self.psfs.shape).astype(np.float32)
+            y, x = np.indices(self.psfs[band].shape).astype(np.float32)
             self.x0[band] = (x*self.psfs[band]).sum()
             self.y0[band] = (y*self.psfs[band]).sum()
 
     def createModel(self, order=1):
-        if order==1:
-            self.model = self.image.copy()
-        else:
-            self.model = ndimage.spline_filter(self.image, output=np.float64, order=order)
+        self.model = {}
+        for band in self.psfs:
+            if order==1:
+                self.model[band] = self.psfs[band].copy()
+            else:
+                self.model[band] = ndimage.spline_filter(self.psfs[band], output=np.float64, order=order)
         self.order = order
 
     def pixeval(self, x, y, band):
-        X = x-self.x+self.x0
-        Y = y-self.y+self.y0
+        X = x-self.x+self.x0[band]
+        Y = y-self.y+self.y0[band]
         psf = ndimage.map_coordinates(self.model[band], [Y,X], prefilter=False)
         psf /= psf.sum()
         return self.amp*psf
@@ -126,7 +129,7 @@ class PointSource(PixelizedModel):
             print 'Not all (or too many) parameters were defined!'
             print self.keys
             sys.exit()
-        PM.__init__(self, model)
+        PixelizedModel.__init__(self, model)
         self.vmap = {}
         self.pars = pars
         for key in self.keys:

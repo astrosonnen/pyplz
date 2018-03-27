@@ -255,6 +255,7 @@ class PyPLZModel:
         # reads in data
     
         filtdic = {}
+        psfdic = {}
         for i in range(self.nbands):
             band = self.bands[i]
         
@@ -299,6 +300,7 @@ class PyPLZModel:
             psf -= m
             psf /= psf.sum()
         
+            psfdic[band] = psf
             self.convol_matrix[band] = convolve.convolve(self.sci[band], psf)[1]
 
         # prepares mask and data array
@@ -442,7 +444,7 @@ class PyPLZModel:
             if comp['class'] == 'Sersic':
                 light = SBModels.Sersic('light%d'%ncomp, pars_here)
             elif comp['class'] == 'PointSource':
-                light = SBModels.PointSource('light%d'%ncomp, pars_here)
+                light = SBModels.PointSource('light%d'%ncomp, psfdic, pars_here)
             else:
                 df
 
@@ -532,7 +534,7 @@ class PyPLZModel:
             if light.__class__.__name__ == 'PointSource':
                 for i in range(self.nbands):
                     scale = sed.scale(self.bands[i], self.main_band)
-                    lmodel[i*self.ny: (i+1)*self.ny, :] = light.pixeval(self.X, self.Y)
+                    lmodel[i*self.ny: (i+1)*self.ny, :] = light.pixeval(self.X, self.Y, self.bands[i])
                     mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
             else:
                 lpix = light.pixeval(self.X, self.Y)
