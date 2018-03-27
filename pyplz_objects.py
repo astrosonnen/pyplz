@@ -630,7 +630,7 @@ class PyPLZModel:
                 for band in self.bands:
                     hdr['%s.mag_%s'%(light.name, band)] = mags[band]
                     scale = sed.scale(band, self.main_band)
-                    light_ind_dic[band] = scale * light.pixeval(self.X, self.Y) 
+                    light_ind_dic[band] = scale * light.pixeval(self.X, self.Y, band) 
             else:
                 lpix = light.pixeval(self.X, self.Y)
                 for band in self.bands:
