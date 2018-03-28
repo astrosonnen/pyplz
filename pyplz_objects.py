@@ -469,6 +469,7 @@ class PyPLZModel:
             name = 'source%d'%ncomp
         
             pars_here = {}
+            sed_here = {}
             for par in comp['pars']:
                 if par in SBModels.parlists['Sersic']:
                     if comp['pars'][par]['link'] is None:
