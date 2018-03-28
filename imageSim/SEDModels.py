@@ -127,7 +127,10 @@ class Template:
         self.vmap = {}
         self.pars = pars
         for key in self.keys:
-            self.vmap[key] = self.pars[key]
+            if self.pars[key].__class__.__name__ == 'Par':
+                self.vmap[key] = self.pars[key]
+            else:
+                self.__setattr__(key, self.pars[key])
 
         self.name = name
         self.zp = zp
