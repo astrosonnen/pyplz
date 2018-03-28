@@ -641,7 +641,7 @@ class PyPLZModel:
             light_ind_model.append(light_ind_dic)
     
             n += 1
-    
+
         for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
         
             source_ind_dic = {}
@@ -771,7 +771,7 @@ class PyPLZModel:
                     else:
                         lname = config['source_components'][ncomp]['pars'][par]['link']
                         npar = self.par2index[lname]
-                        conflines.append('%s %f %f %f %f 1\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
+                        conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             for band in self.bands:
                 conflines.append('mag_%s %3.2f\n'%(band, mags[band]))
             if uvmag is not None:
