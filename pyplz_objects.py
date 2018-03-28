@@ -454,6 +454,8 @@ class PyPLZModel:
                 sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.zp)
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, self.zp)
+            else:
+                df
             self.light_sed_models.append(sed)
             self.light_mags.append({})
 
