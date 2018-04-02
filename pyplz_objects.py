@@ -315,9 +315,9 @@ class PyPLZModel:
         self.R = ((X - nx/2)**2 + (Y - ny/2)**2)**0.5
         
         if config['mask_dir'] is None:
-            mask_dir = config['data_dir']
-        else:
             mask_dir = './'
+        else:
+            mask_dir = config['mask_dir']
         
         if config['maskname'] is not None:
             MASK = pyfits.open(mask_dir+config['maskname'])[0].data.copy()
