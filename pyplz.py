@@ -16,9 +16,12 @@ while i <= nargv and not inputfound:
     argv = sys.argv[i]
     if argv[0] == '-':
         key = argv[1:]
-        if key == 's':
+        if key == 'c':
             saveind = int(sys.argv[i+1])
             inputfile = sys.argv[i+2]
+            inputfound = True
+        elif key == 's':
+            inputfile = sys.argv[i+1]
             inputfound = True
         elif key == 'l':
             catlist = True
@@ -37,7 +40,7 @@ while i <= nargv and not inputfound:
             print 'unknown option -%s'%key
             df
     else:
-        print 'must specify mode: -s, -l, -o, -M'
+        print 'must specify mode: -s, -l, -o, -M, -c'
         df
     i += 1
 
@@ -74,7 +77,10 @@ for configfile in confnames:
         model.update()
         model.optimize_amp()
 
-    elif key == 'p':
+        model.save(modelname)
+        model.write_config_file(config, modelname)
+
+     elif key == 'p':
    
         chainname = config['output_dir']+configfile+'_pymcchain.hdf5'
         pyplz_fitters.run_pymc(model, chainname, nsteps=config['Nsteps'], burnin=config['burnin'])
@@ -89,7 +95,10 @@ for configfile in confnames:
         model.update()
         model.optimize_amp()
 
-    elif key == 's':
+        model.save(modelname)
+        model.write_config_file(config, modelname)
+ 
+    elif key == 'c':
     
         chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
 
@@ -99,12 +108,24 @@ for configfile in confnames:
 
         model.update()
         model.optimize_amp()
- 
+
+        model.write_config_file(config, modelname)
+  
     elif key == 'o':
         
         pyplz_fitters.optimize(model, config['Nsteps'])
         modelname = config['output_dir']+configfile+'_optimized'
+
+        model.save(modelname)
+        model.write_config_file(config, modelname)
    
-    model.save(modelname)
-    model.write_config_file(config, modelname)
+    elif key == 's':
+
+        modelname = config['output_dir']+configfile
+
+        model.update()
+        model.optimize_amp()
+
+        model.save(modelname)
+
 
