@@ -80,7 +80,7 @@ for configfile in confnames:
         model.save(modelname)
         model.write_config_file(config, modelname)
 
-     elif key == 'p':
+    elif key == 'p':
    
         chainname = config['output_dir']+configfile+'_pymcchain.hdf5'
         pyplz_fitters.run_pymc(model, chainname, nsteps=config['Nsteps'], burnin=config['burnin'])
