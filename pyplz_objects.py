@@ -618,6 +618,7 @@ class PyPLZModel:
         rgbname = outname+'_rgb.png'
    
         hdr = pyfits.Header()
+        hdr['logp'] = self.logp
     
         light_ind_model = []
         source_ind_model = []
