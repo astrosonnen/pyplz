@@ -6,14 +6,15 @@ from scipy.stats import truncnorm
 from scipy.optimize import basinhopping
 from scipy.interpolate import splrep, splev, splint
 import luminosity_functions
-from luminosity_functions import omegaL, omegaM
+import pyplz_cosmology
+from pyplz_cosmology import omegaL, omegaM
 
 
 nz = 101
 z_grid = np.linspace(0., 5., nz)
 comovd_grid = 0. * z_grid
 for i in range(nz):
-    comovd_grid[i] = luminosity_functions.comovd(z_grid[i])
+    comovd_grid[i] = pyplz_cosmology.comovd(z_grid[i])
 
 comovd_spline = splrep(z_grid, comovd_grid)
  
@@ -45,7 +46,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 dgrid_here = 0. * zgrid_here
                 light_photoz_zgrids[n] = zgrid_here
                 for i in range(nz):
-                    dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+                    dgrid_here[i] = pyplz_cosmology.comovd(zgrid_here[i])
                 light_photoz_dgrids[n] = dgrid_here
                 done_indices.append(model.par2index[parname])
 
@@ -57,7 +58,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 dgrid_here = 0. * zgrid_here
                 source_photoz_zgrids[n] = zgrid_here
                 for i in range(nz):
-                    dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+                    dgrid_here[i] = pyplz_cosmology.comovd(zgrid_here[i])
                 source_photoz_dgrids[n] = dgrid_here
                 done_indices.append(model.par2index[parname])
 
@@ -234,7 +235,7 @@ def run_pymc(model, chainname, nsteps=11000, burnin=1000):
             dgrid_here = 0. * zgrid_here
             light_photoz_zgrids[n] = zgrid_here
             for i in range(nz):
-                dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+                dgrid_here[i] = pyplz_cosmology.comovd(zgrid_here[i])
             light_photoz_dgrids[n] = dgrid_here
 
     for n in range(model.nsource):
@@ -244,7 +245,7 @@ def run_pymc(model, chainname, nsteps=11000, burnin=1000):
             dgrid_here = 0. * zgrid_here
             source_photoz_zgrids[n] = zgrid_here
             for i in range(nz):
-                dgrid_here[i] = luminosity_functions.comovd(zgrid_here[i])
+                dgrid_here[i] = pyplz_cosmology.comovd(zgrid_here[i])
             source_photoz_dgrids[n] = dgrid_here
 
     @pymc.deterministic()

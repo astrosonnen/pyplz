@@ -1,19 +1,9 @@
 import numpy as np
 from scipy.interpolate import splrep, splev, splint
 from scipy.integrate import quad
-from sonnentools.cgsconstants import *
 import pylab
+import pyplz_cosmology
 
-
-Mpc = 3.08568025e24
-c = 2.99792458e10
-H0 = 70.
-omegaL = 0.7
-omegaM = 0.3
-
-def comovd(z):
-    I = quad(lambda z: 1./(omegaL + omegaM*(1+z)**3)**0.5, 0., z)
-    return c/(H0*10.**5)*I[0]
 
 # luminosity function from Arnouts et al. (2005)
 z_arn = [0., 0.3, 0.5, 0.7, 1.0]
