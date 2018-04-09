@@ -1,5 +1,4 @@
 import numpy as np
-import cosmology
 from scipy.interpolate import splrep, splev, splint
 from scipy.integrate import quad
 from sonnentools.cgsconstants import *
