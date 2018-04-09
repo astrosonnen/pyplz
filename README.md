@@ -12,10 +12,19 @@ Requirements:
 USAGE: 
 
 ```
-python $PYPLZDIR/pyplz.py configfile
+python $PYPLZDIR/pyplz.py OPTION configfile
 ```
 
 A configuration file consists of a preamble, where keywords indicating the names of the files, filters, length of the MCMC chain etc. are defined, and a models section.
+
+## Options
+
+- -M: runs MCMC using emcee
+- -p: runs MCMC using pymc
+- -l: reads a list of names of configuration files and runs an MCMC for each one
+- -s: saves .fits file with model specified by the configuration file
+- -o: looks for maximum likelihood solution using an optimizer (scipy.optimize.basinhopper)
+- -c: reads point from the MCMC chain of the corresponding configuration file, and writes a new configuration file with it as starting point
 
 ## Models
 The models section can consist of photometric components, mass models (lenses), and lensed sources, in any combination. Photometric components are declared by the keyword 'light_model', followed by the surface brightness profile family (only Sersic is available at the moment), and the keyword specifying the kind of SED model. The SED model can either be 'freecolors' or 'template'.
@@ -43,7 +52,7 @@ The examples are based on a strong lens system, SL2SJ220506+014703 (Sonnenfeld e
 HSC g, r, i, z, y-band data of this lens are provided in the examples/data directory.
 By running
 ```
-python $PYPLZDIR/pyplz.py foreground_freecolors
+python $PYPLZDIR/pyplz.py -M foreground_freecolors
 ```
 pyplz will fit a Sersic profile to the lens galaxy, while the background source is masked out. The colors of the lens galaxy are treated as free parameters.
 After the MCMC is completed (it should take around 10 minutes), pyplz outputs a bunch of files.
@@ -52,7 +61,7 @@ The file 'foreground_freecolors_chain.hdf5' contains the whole chain.
 The MCMC is done using emcee. emcee uses a number of walkers to explore the posterior PDF (specified by keyword Nwalkers in configuration file).
 In the end the chain will have shape (Nwalkers, Nsteps).
 ```
-python $PYPLZDIR/pyplz.py foreground_photoz
+python $PYPLZDIR/pyplz.py -M foreground_photoz
 ```
 will fit a Sersic profile to the same galaxy, but this time the model SED is described by a spectral template, and the redshift is a free parameter (zs in the configuration file).
 The inferred redshift distribution (stored as 'light1.zs' in the corresponding .hdf5 file), is bimodal. One peak corresponds to the correct solution (the spec-z of this lens is 0.476), while the second peak corresponds to an alternative solution at redshift 3.8.
