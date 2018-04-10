@@ -179,6 +179,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
             outchain['light%d.mag_%s'%(i+1, band)] = np.zeros((nwalkers, nsteps))
         if model.light_sed_models[i].__class__.__name__ == 'Template':
             outchain['light%d.M_UV'%(i+1)] = np.zeros((nwalkers, nsteps))
+        elif model.light_sed_models[i].__class__.__name__ == 'SPS':
+            outchain['light%d.mstar'%(i+1)] = np.zeros((nwalkers, nsteps))
         if i in light_photoz_zgrids:
             outchain['light%d.loguvprior'%(i+1)] = np.zeros((nwalkers, nsteps))
 
@@ -197,6 +199,8 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                     outchain['light%d.mag_%s'%(l+1, band)][j, i] = magschain[i][j][l][band]
                     if model.light_sed_models[l].__class__.__name__ == 'Template':
                         outchain['light%d.M_UV'%(l+1)][j, i] = magschain[i][j][l]['UV']
+                    elif model.light_sed_models[l].__class__.__name__ == 'SPS':
+                        outchain['light%d.mstar'%(l+1)][j, i] = magschain[i][j][l]['mstar']
                 for s in range(model.nsource):
                     outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][model.nlight+s][band]
                     if model.source_sed_models[s].__class__.__name__ == 'Template':

@@ -14,7 +14,7 @@ def read_config(filename):
     lines = f.readlines()
     f.close()
 
-    config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'filters': None, 'main_band': None, \
+    config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'sps_model_dir': None, 'filters': None, 'main_band': None, \
               'zeropoints': None, \
               'filename': None, 'filter_prefix': '', 'filter_suffix': '', 'science_tag':'_sci.fits', 'err_tag':'_var.fits', 'err_type': 'VAR', 'psf_tag':'_psf.fits', \
               'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
@@ -81,16 +81,22 @@ def read_config(filename):
                 else:
                     df
 
+                sps_model = None
                 if sed_class == 'freecolors':
                     parnames += config['colors']
                 elif sed_class == 'template':
                     parnames += ['zs', 'tn']
+                elif sed_class == 'sps':
+                    sps_model = line[3]
+                    parnames += ['redshift', 'age', 'tau', 'logZ', 'logtau_V']
                 else:
                     df
 
                 npars = len(parnames)
 
                 comp = {'class':model_class, 'pars':{}, 'sed': sed_class}
+                if sps_model is not None:
+                    comp['sps_model'] = sps_model
 
                 foundpars = 0
                 j = 1
@@ -129,8 +135,12 @@ def read_config(filename):
 
                 if sed_class == 'freecolors':
                     parnames += config['colors']
-                else:
+                elif sed_class == 'template':
                     parnames += ['zs', 'tn']
+                elif sed_class == 'sps':
+                    parnames += ['redshift', 'age', 'logZ', 'tau', 'logtau_V']
+                else:
+                    df
 
                 npars = len(parnames)
 
@@ -254,21 +264,17 @@ class PyPLZModel:
 
         # reads in data
     
-        filtdic = {}
+        filtnames = {}
         psfdic = {}
         for i in range(self.nbands):
             band = self.bands[i]
         
             self.zp[band] = config['zeropoints'][i]
         
-            filtname = rootdir+'/filters/%s%s%s'%(config['filter_prefix'], band, config['filter_suffix'])
+            filtname = config['filter_prefix'] + band + config['filter_suffix']
         
-            f = open(filtname, 'r')
-            ftable = np.loadtxt(f)
-            f.close()
-        
-            filtdic[band] = (ftable[:, 0], ftable[:, 1])
-        
+            filtnames[band] = filtname
+
             hdu = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['science_tag'])[0]
         
             img = hdu.data.copy()
@@ -380,16 +386,12 @@ class PyPLZModel:
         
         i = 0
         
-        filtdic = {}
+        filtnames = {}
         for band in config['filters']:
         
-            filtname = rootdir+'/filters/%s%s%s'%(config['filter_prefix'], band, config['filter_suffix'])
+            filtname = config['filter_prefix'] + band + config['filter_suffix']
         
-            f = open(filtname, 'r')
-            ftable = np.loadtxt(f)
-            f.close()
-        
-            filtdic[band] = (ftable[:, 0], ftable[:, 1])
+            filtnames[band] = filtname
         
         ncomp = 1
         for comp in config['lens_components']:
@@ -453,7 +455,10 @@ class PyPLZModel:
             if comp['sed'] == 'freecolors':
                 sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.zp)
             elif comp['sed'] == 'template':
-                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, self.zp)
+                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, self.zp)
+            elif comp['sed'] == 'sps':
+                modelname = config['sps_model_dir'] + comp['sps_model']
+                sed = SEDModels.SPS('light_sed%d'%ncomp, sed_here, self.bands, self.zp, modelname)
             else:
                 df
             self.light_sed_models.append(sed)
@@ -497,7 +502,7 @@ class PyPLZModel:
             if comp['sed'] == 'freecolors':
                 sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, zp=self.zp)
             elif comp['sed'] == 'template':
-                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtdic, zp=self.zp)
+                sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, zp=self.zp)
             self.source_sed_models.append(sed)
             self.source_mags.append({})
          
@@ -565,15 +570,20 @@ class PyPLZModel:
             amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
 
         i = 0
-        for light, mags in zip(self.light_sb_models, self.light_mags):
+        for light, sed, mags in zip(self.light_sb_models, self.light_sed_models, self.light_mags):
+                
             if amps[i] > 0.:
                 light.amp *= amps[i]
                 mainmag = light.Mag(self.zp[self.main_band])
                 for band in self.bands:
                     mags[band] += mainmag
+                if sed.__class__.__name__ == 'SPS':
+                    mags['mstar'] = 10.**(-2./5.*(mainmag - sed.mags[self.main_band]))
             else:
                 for band in self.bands:
                     mags[band] = 99.
+                if sed.__class__.__name__ == 'SPS':
+                    mags['mstar'] = 0.
             i += 1
 
         for source, mags in zip(self.source_sb_models, self.source_mags):
@@ -594,18 +604,18 @@ class PyPLZModel:
 
         light_mags = []
         for light, sed in zip(self.light_sb_models, self.light_sed_models):
-            mainmag = light.Mag(self.zp[self.main_band])
-            scale = sed.restUV_scale(self.main_band)
-            if scale is not None:
+            if sed.__class__.__name__ == 'Template':
+                mainmag = light.Mag(self.zp[self.main_band])
+                scale = sed.restUV_scale(self.main_band)
                 light_mags.append(mainmag - 2.5*np.log10(scale))
             else:
                 light_mags.append(None)
 
         source_mags = []
         for source, sed in zip(self.source_sb_models, self.source_sed_models):
-            mainmag = source.Mag(self.zp[self.main_band])
-            scale = sed.restUV_scale(self.main_band)
-            if scale is not None:
+            if sed.__class__.__name__ == 'Template':
+                mainmag = source.Mag(self.zp[self.main_band])
+                scale = sed.restUV_scale(self.main_band)
                 source_mags.append(mainmag - 2.5*np.log10(scale))
             else:
                 source_mags.append(None)
@@ -706,7 +716,7 @@ class PyPLZModel:
     def write_config_file(self, config, outname):
     
         conflines = []
-        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
+        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'sps_model_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
         for parname in confpars:
             if config[parname] is not None:
                 conflines.append('%s: %s\n'%(parname, config[parname]))
@@ -732,9 +742,16 @@ class PyPLZModel:
                 lightpars = SBModels.parlists[comp['class']] + config['colors']
             elif comp['sed'] == 'template':
                 lightpars = SBModels.parlists[comp['class']] + ['zs', 'tn']
-    
+            elif comp['sed'] == 'sps':
+                lightpars = SBModels.parlists[comp['class']] + ['redshift', 'age', 'logZ', 'tau', 'logtau_V']
+
             conflines.append('\n')
-            conflines.append('light_model %s %s\n'%(comp['class'], comp['sed']))
+            modeltypeline = 'light_model %s %s'%(comp['class'], comp['sed']))
+            if 'sps_model' in comp:
+                modeltypeline += ' %s\n'%comp['sps_model']
+            else:
+                modeltypeline += '\n'
+            conflines.append(modeltypeline)
             for par in lightpars:
                 parname = 'light%d.%s'%(ncomp+1, par)
                 if parname in self.par2index:
@@ -751,6 +768,8 @@ class PyPLZModel:
                 conflines.append('mag_%s %3.2f\n'%(band, mags[band]))
             if uvmag is not None:
                 conflines.append('uvmag %3.2f\n'%uvmag)
+            if 'mstar' in mags:
+                conflines.append('mstar %4.3f\n'%mags['mstar'])
             ncomp += 1
         
         ncomp = 0

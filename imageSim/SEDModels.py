@@ -1,9 +1,12 @@
 import numpy as np
 from scipy.interpolate import splrep, splev
 import os
+import cPickle
+import pyplz_cosmology
 
 
 tempdir = os.environ.get('PYPLZDIR') + '/templates/'
+filtdir = os.environ.get('PYPLZDIR') + '/filters/'
 
 def etau_madau(wl, z):
     """
@@ -84,15 +87,20 @@ class Colors:
 
 class Template:
 
-    def __init__(self, name, pars, filters, zp, normrange=(4000., 5000.)):
+    def __init__(self, name, pars, filtnames, zp, normrange=(4000., 5000.)):
 
         splinedic = {}
         rangedic = {}
-    
+
         wavmax = 0.
-        for band in filters:
-            splinedic[band] = splrep(filters[band][0], filters[band][1])
-            rangedic[band] = (filters[band][0][0], filters[band][0][-1])
+        for band in filtnames:
+        
+            f = open(filtdir+filtnames[band], 'r')
+            ftable = np.loadtxt(f)
+            f.close()
+        
+            splinedic[band] = splrep(ftable[:, 0], ftable[:, 1])
+            rangedic[band] = (ftable[0, 0], ftable[-1, 0])
             if rangedic[band][1] > wavmax:
                 wavmax = rangedic[band][1]
     
@@ -235,4 +243,60 @@ class Template:
         ratio = (a1 * temp_fnus[0][0] + a2 * temp_fnus[1][0]) / (a1 * temp_fnus[0][1] + a2 * temp_fnus[1][1])
 
         return ratio 
+
+
+class SPS:
+
+    def __init__(self, name, pars, bands, zp, modelname, restmodelname=None):
+
+        self.keys = ['redshift', 'age', 'tau', 'logZ', 'logtau_V']
+
+        self.vmap = {}
+        self.pars = pars
+        for key in self.keys:
+            if self.pars[key].__class__.__name__ == 'Par':
+                self.vmap[key] = self.pars[key]
+            else:
+                self.__setattr__(key, self.pars[key])
+
+        self.name = name
+        self.zp = zp
+        self.bands = bands
+        self.mags = {}
+        for band in self.bands:
+            self.mags[band] = None
+
+        f = open(modelname, 'rb')
+        self.model = cPickle.load(f)
+        f.close()
+
+        if restmodelname is not None:
+            f = open(restmodelname, 'r')
+            self.restmodel = pickle.load(f)
+            f.close()
+        else:
+            self.restmodel = None
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    def setPars(self):
+        for key in self.vmap:
+            self.__setattr__(key, self.vmap[key].value)
+
+        # calculates fluxes
+
+        pnt = {}
+        pnt['redshift'] = [self.redshift]
+        pnt['age'] = [self.age]
+        pnt['tau'] = [self.tau]
+        pnt['Z'] = [10.**self.logZ]
+        pnt['tau_V'] = [10.**self.logtau_V]
+
+        for band in self.bands:
+            self.mags[band] = self.model.eval(pnt, band)[0]
+
+    def scale(self, band2, band1):
+        return 10.**(-2./5*(self.mags[band2] - self.zp[band2] - self.mags[band1] + self.zp[band1]))
+
 
