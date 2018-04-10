@@ -746,7 +746,7 @@ class PyPLZModel:
                 lightpars = SBModels.parlists[comp['class']] + ['redshift', 'age', 'logZ', 'tau', 'logtau_V']
 
             conflines.append('\n')
-            modeltypeline = 'light_model %s %s'%(comp['class'], comp['sed']))
+            modeltypeline = 'light_model %s %s'%(comp['class'], comp['sed'])
             if 'sps_model' in comp:
                 modeltypeline += ' %s\n'%comp['sps_model']
             else:
