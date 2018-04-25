@@ -3,11 +3,17 @@ from scipy.interpolate import splrep, splev
 import os
 import cPickle
 import pyplz_cosmology
+import pyplz_dustlaw
 
 
 tempdir = os.environ.get('PYPLZDIR') + '/templates/'
 filtdir = os.environ.get('PYPLZDIR') + '/filters/'
 
+parlists = {'template': ['tn', 'zs'], 'sps': ['redshift', 'age', 'tau', 'logZ', 'logtau_V']}
+
+def extinct(wav, ebmv, Rv=3.1):
+    return pyplz_dustlaw.Alambda(wav, Rv=Rv)*Rv*ebmv
+ 
 def etau_madau(wl, z):
     """
     Madau 1995 extinction for a galaxy spectrum at redshift z 
@@ -53,16 +59,29 @@ def etau_madau(wl, z):
 
 class Colors:
 
-    def __init__(self, name, pars, zp):
+    def __init__(self, name, pars, bands, main_band, zp):
 
         self.keys = []
+        if not 'main_mag' in pars:
+            pars['main_mag'] = 0.
+
         for par in pars:
             self.keys.append(par)
 
         self.vmap = {}
         self.pars = pars
         for key in self.keys:
-            self.vmap[key] = self.pars[key]
+            if self.pars[key].__class__.__name__ == 'Par':
+                self.vmap[key] = self.pars[key]
+            else:
+                self.__setattr__(key, self.pars[key])
+
+        self.bands = bands
+        self.main_band = main_band
+
+        self.mags = {}
+        for band in self.bands:
+            self.mags[band] = None
 
         self.name = name
         self.zp = zp
@@ -73,13 +92,14 @@ class Colors:
     def setPars(self):
         for key in self.vmap:
             self.__setattr__(key, self.vmap[key].value)
+        for band in self.bands:
+            if band == self.main_band:
+                self.mags[band] = self.main_mag
+            else:
+                self.mags[band] = self.__dict__['%s-%s'%(band, self.main_band)] + self.main_mag
 
     def scale(self, band2, band1):
-        if band2 == band1:
-            return 1.
-        else:
-            col = self.__dict__['%s-%s'%(band2, band1)]
-            return 10.**(-(col - self.zp[band2] + self.zp[band1])/2.5)
+        return 10.**(-(self.mags[band2] - self.mags[band1] - self.zp[band2] + self.zp[band1])/2.5)
 
     def restUV_scale(self, refband):
         return None
@@ -247,12 +267,15 @@ class Template:
 
 class SPS:
 
-    def __init__(self, name, pars, bands, zp, modelname, restmodelname=None):
+    def __init__(self, name, pars, bands, zp, modelname, filtnames, ebmv=0., restmodelname=None):
 
-        self.keys = ['redshift', 'age', 'tau', 'logZ', 'logtau_V']
+        self.keys = ['logmass', 'redshift', 'age', 'tau', 'logZ', 'logtau_V']
 
         self.vmap = {}
+        if not 'logmass' in pars:
+            pars['logmass'] = 1.
         self.pars = pars
+
         for key in self.keys:
             if self.pars[key].__class__.__name__ == 'Par':
                 self.vmap[key] = self.pars[key]
@@ -262,9 +285,23 @@ class SPS:
         self.name = name
         self.zp = zp
         self.bands = bands
+
+
         self.mags = {}
         for band in self.bands:
             self.mags[band] = None
+
+        self.extinction_corr = {}
+
+        for band in self.bands:
+        
+            f = open(filtdir+filtnames[band], 'r')
+            ftable = np.loadtxt(f)
+            f.close()
+        
+            filtwav = (ftable[:, 0] * ftable[:, 1]).sum() / ftable[:, 1].sum()
+            self.extinction_corr[band] = extinct(filtwav, ebmv)
+            print band, filtwav, self.extinction_corr[band]
 
         f = open(modelname, 'rb')
         self.model = cPickle.load(f)
@@ -294,7 +331,7 @@ class SPS:
         pnt['tau_V'] = [10.**self.logtau_V]
 
         for band in self.bands:
-            self.mags[band] = self.model.eval(pnt, band)[0]
+            self.mags[band] = self.model.eval(pnt, band)[0] - 2.5*self.logmass + self.extinction_corr[band]
 
     def scale(self, band2, band1):
         return 10.**(-2./5*(self.mags[band2] - self.zp[band2] - self.mags[band1] + self.zp[band1]))

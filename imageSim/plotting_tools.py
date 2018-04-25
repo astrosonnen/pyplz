@@ -1,4 +1,3 @@
-import pylab
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
