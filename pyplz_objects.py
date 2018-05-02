@@ -453,7 +453,7 @@ class PyPLZModel:
             self.light_sb_models.append(light)
 
             if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.zp)
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.main_band, self.zp)
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, self.zp)
             elif comp['sed'] == 'sps':
@@ -500,7 +500,7 @@ class PyPLZModel:
 
             self.source_sb_models.append(source)
             if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, zp=self.zp)
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.main_band, zp=self.zp)
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, zp=self.zp)
             self.source_sed_models.append(sed)
