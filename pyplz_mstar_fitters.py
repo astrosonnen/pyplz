@@ -53,10 +53,9 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
 
         model.update()
 
-        chi2 = model.get_chi2()
-        logp = -0.5*chi2
+        #logp = -0.5*chi2
 
-        if logp != logp:
+        if model.logp != model.logp:
             return -np.inf, fakemags
 
         allmags = []
@@ -73,7 +72,7 @@ def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
                 magdic[band] = model.source_sed_models[i].mags[band]
             allmags.append(magdic)
      
-        return logp, allmags
+        return model.logp, allmags
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 

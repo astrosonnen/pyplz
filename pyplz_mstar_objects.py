@@ -72,6 +72,7 @@ def read_config(filename):
     light_components = []
     lens_components = []
     source_components = []
+    sky = None
 
     while i < len(lines):
 
@@ -190,7 +191,7 @@ def read_config(filename):
                 else:
                     df
 
-                comp = {'class': model_class, 'sed': sed_class, 'pars':{}}
+                comp = {'class': model_class, 'sed': None, 'pars':{}}
 
                 foundpars = 0
                 j = 1
@@ -216,6 +217,42 @@ def read_config(filename):
                 else:
                     lens_components.append(comp)
 
+            elif 'sky' in line[0]:
+
+                parnames = []
+                for band in config['filters']:
+                    parnames.append('amp_%s'%band)
+                npars = len(parnames)
+
+                comp = {'class': 'sky', 'sed': None, 'pars':{}}
+
+                foundpars = 0
+                foundpound = False
+                j = 1
+
+                while foundpars < npars and j+i < len(lines) and not foundpound:
+                    line = lines[j+i].split()
+                    if lines[j+i][0] != '#' and len(line) > 0:
+                        if line[0] in parnames:
+                            foundpars += 1
+                            par = line[0]
+                            link = None
+                            if len(line) > 6:
+                                link = line[6]
+                            tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
+                           'step': float(line[4]), 'var': int(line[5]), 'link':link}
+                            comp['pars'][par] = tmp_par
+                    elif lines[j+1][0] == '#':
+                        foundpound = True
+                    j += 1
+
+                i += j
+
+                if foundpars < npars:
+                    print 'not all parameters found!'
+                else:
+                    sky = comp
+
             else:
                 i += 1
         else:
@@ -224,6 +261,7 @@ def read_config(filename):
     config['light_components'] = light_components
     config['source_components'] = source_components
     config['lens_components'] = lens_components
+    config['sky'] = sky
 
     return config
 
@@ -391,7 +429,17 @@ class PyPLZModel:
                     self.par2index['lens'+str(ncomp)+'.'+par] = npar
                     self.index2par[npar] = 'lens'+str(ncomp)+'.'+par
                     npar += 1
-        
+
+        if config['sky'] is not None:
+            comp = config['sky']
+            for par in comp['pars']:
+                parpar = comp['pars'][par]
+                if parpar['link'] is None and parpar['var'] == 1:
+                    self.pars.append(Par(par, lower=parpar['low'], upper=parpar['up'], value=parpar['value'], step=parpar['step']))
+                    self.par2index['sky'+'.'+par] = npar
+                    self.index2par[npar] = 'sky'+'.'+par
+                    npar += 1
+         
         i = 0
         
         filtnames = {}
@@ -518,6 +566,25 @@ class PyPLZModel:
 
         self.nsource = len(self.source_sb_models)
 
+        if config['sky'] is not None:
+
+            comp = config['sky']
+            name = 'sky'
+        
+            pars_here = {}
+            for par in comp['pars']:
+                if comp['pars'][par]['link'] is None:
+                    if comp['pars'][par]['var'] == 1:
+                        pars_here[par] = self.pars[self.par2index[name+'.'+par]]
+                    else:
+                        pars_here[par] = Par(par, lower=comp['pars'][par]['value'], upper=comp['pars'][par]['value'], value=comp['pars'][par]['value'])
+                else:
+                    pars_here[par] = self.pars[self.par2index[comp['pars'][par]['link']]]
+
+            self.sky = pars_here
+        else:
+            self.sky = None
+
     def update(self):
 
         for lens in self.lens_models:
@@ -534,6 +601,8 @@ class PyPLZModel:
 
         for source_sed in self.source_sed_models:
             source_sed.setPars()
+
+        self.get_chi2()
 
     def get_chi2(self):
 
@@ -567,14 +636,18 @@ class PyPLZModel:
                 smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
             model_array += smodel.ravel()[self.maskstack_r]
         
+        if self.sky is not None:
+            skymodel = 0. * self.scistack
+            for i in range(self.nbands):
+                skymodel[i*self.ny: (i+1)*self.ny, :] = self.sky['amp_%s'%self.bands[i]].value
+            model_array += skymodel.ravel()[self.maskstack_r]
+
         if np.isnan(model_array).any() or not np.isfinite(model_array).any():
             chi2 = 1e300
         else:
             chi2 = ((model_array - self.scistack.ravel()[self.maskstack_r])**2/(self.errstack.ravel()[self.maskstack_r])**2).sum()
 
         self.logp = -0.5*chi2
-
-        return chi2
 
     def get_restUV_mags(self):
 
@@ -667,6 +740,12 @@ class PyPLZModel:
                 hdu_here.header['EXTNAME'] = '%s_%s'%(source.name, band)
     
                 hdulist.append(hdu_here)
+
+        if self.sky is not None:
+            for band in self.bands:
+                hdu_here = pyfits.ImageHDU(data=self.sky['amp_%s'%band].value + 0.*self.sci[band])
+                hdu_here.header['EXTNAME'] = 'sky_%s'%band
+                hdulist.append(hdu_here)
     
         hdulist.writeto(fitsname, overwrite=True)
         
@@ -682,6 +761,9 @@ class PyPLZModel:
                 smodel = 0.*self.sci[band]
                 for light in light_ind_model:
                     lmodel += light[band]
+                if self.sky is not None:
+                    lmodel += self.sky['amp_%s'%band].value
+
                 light_list.append(lmodel)
                 for source in source_ind_model:
                     smodel += source[band]
@@ -795,7 +877,25 @@ class PyPLZModel:
                         npar = self.par2index[lname]
                         conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
             ncomp += 1
-        
+
+        if self.sky is not None:
+            conflines.append('\n')
+            conflines.append('sky\n')
+            for band in self.bands:
+                par = 'amp_%s'%band
+                parname = 'sky.amp_%s'%band
+                if parname in self.par2index:
+                    npar = self.par2index[parname]
+                    conflines.append('%s %f %f %f %f 1\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step))
+                else:
+                    if config['sky']['pars'][par]['link'] is None:
+                        conflines.append('%s %f -1 -1 -1 0\n'%(par, config['sky']['pars'][par]['value']))
+                    else:
+                        lname = config['sky']['pars'][par]['link']
+                        npar = self.par2index[lname]
+                        conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
+            ncomp += 1
+         
         conflines.append('\n')
         conflines.append('logp %f\n'%self.logp)
 
