@@ -692,7 +692,7 @@ class PyPLZModel:
     
                 hdulist.append(hdu_here)
     
-        hdulist.writeto(fitsname, overwrite=True)
+        hdulist.writeto(fitsname, clobber=True)
         
         if make_rgb:
 
