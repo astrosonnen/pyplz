@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.interpolate import splrep, splev, splint
 from scipy.integrate import quad
-import pylab
 import pyplz_cosmology
 
 
