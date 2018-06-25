@@ -28,16 +28,18 @@ def run_mcmc(model, chainname, walkers=100, nsteps=1000):
     source_photoz_dgrids = {}
 
     if type(walkers) == int:
+        nwalkers = walkers
+
         start = []
         for j in range(npars):
             a, b = (model.pars[j].lower - model.pars[j].value)/model.pars[j].step, (model.pars[j].upper - model.pars[j].value)/model.pars[j].step
-            tmp = truncnorm.rvs(a, b, size=walkers)*model.pars[j].step + model.pars[j].value
+            tmp = truncnorm.rvs(a, b, size=nwalkers)*model.pars[j].step + model.pars[j].value
             start.append(tmp)
 
         start = np.array(start).T
-
     else:
         start = walkers
+        nwalkers = start.shape[0]
 
     # checks if there are photoz-s among the free parameters, and prepares grids
     done_indices = []

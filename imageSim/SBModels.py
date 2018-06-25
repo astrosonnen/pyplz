@@ -6,7 +6,7 @@ from scipy import ndimage
 import os
 
 
-tempdir = os.environ.get('PYLENSDIR') + 'pylens/templates/'
+tempdir = os.environ.get('PYPLZDIR') + '/templates/'
 parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PointSource': ['x', 'y']}
 
 def cnts2mag(cnts, zp):
@@ -116,6 +116,15 @@ class Sersic(SBModel,SBProfiles.Sersic):
 
     def Mag(self,zp):
         return self.getMag(self.amp,zp)
+
+    def setAmpFromMag(self,mag,zp):
+        from math import exp,log10,pi
+        from scipy.special import gamma
+        cnts = 10**(-0.4*(mag-zp))
+        n = self.n
+        re = self.re
+        k = 2.*n-1./3+4./(405.*n)+46/(25515.*n**2)
+        self.amp = cnts/((re**2)*exp(k)*n*(k**(-2*n))*gamma(2*n)*2*pi)
 
 
 class PointSource(PixelizedModel):

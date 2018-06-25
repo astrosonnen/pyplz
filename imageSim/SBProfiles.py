@@ -19,15 +19,6 @@ class Sersic:
         self.n = n
         self.convolve = True
 
-    def setAmpFromMag(self,mag,zp):
-        from math import exp,log10,pi
-        from scipy.special import gamma
-        cnts = 10**(-0.4*(mag-zp))
-        n = self.n
-        re = self.re
-        k = 2.*n-1./3+4./(405.*n)+46/(25515.*n**2)
-        self.amp = cnts/((re**2)*exp(k)*n*(k**(-2*n))*gamma(2*n)*2*pi)
-
     def eval(self,r):
         k = 2.*self.n-1./3+4./(405.*self.n)+46/(25515.*self.n**2)
         R = r/self.re
