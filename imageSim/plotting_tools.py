@@ -37,8 +37,6 @@ def marshall15_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
     G = G/M * 255.
     B = B/M * 255.
 
-    print R.max(), G.max(), B.max()
-
     R[R<0.] = 0.
     G[G<0.] = 0.
     B[B<0.] = 0.
@@ -74,8 +72,6 @@ def lupton04_pil_format(images, scales=(1., 1., 1.), beta=1.):
     R = R/M * 255.
     G = G/M * 255.
     B = B/M * 255.
-
-    print R.max(), G.max(), B.max()
 
     R[R<0.] = 0.
     G[G<0.] = 0.
