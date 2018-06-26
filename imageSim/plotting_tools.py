@@ -18,6 +18,44 @@ def make_rgbarray(images, cuts):
     rgbarray = np.array(scaled).T
     return rgbarray
 
+def marshall15_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
+
+    r = images[0] * scales[0]
+    g = images[1] * scales[1]
+    b = images[2] * scales[2]
+
+    I = (r + g + b)/3.
+    f = np.arcsinh(alpha*I*Q)
+
+    R = r*f/(I*Q)
+    G = g*f/(I*Q)
+    B = b*f/(I*Q)
+
+    M = max(R.max(), G.max(), B.max())
+
+    R = R/M * 255.
+    G = G/M * 255.
+    B = B/M * 255.
+
+    print R.max(), G.max(), B.max()
+
+    R[R<0.] = 0.
+    G[G<0.] = 0.
+    B[B<0.] = 0.
+
+    flatlist = []
+    for img in [R, G, B]:
+        img = np.uint8(img.round())
+        img = np.flipud(img)
+        flatlist.append(img.flatten())
+
+    l = []
+    for i in range(images[0].size):
+        l.append((flatlist[0][i], flatlist[1][i], flatlist[2][i]))
+
+    return l
+
+
 def lupton04_pil_format(images, scales=(1., 1., 1.), beta=1.):
 
     r = images[0] * scales[0]
