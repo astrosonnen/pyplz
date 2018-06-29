@@ -2,22 +2,6 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def make_rgbarray(images, cuts):
-
-    scaled = []
-    for i in range(3):
-        img = images[i].copy()
-
-        img[img<0.] = 0.
-        img *= 255./cuts[i]
-        img[img>255.] = 255.
-        img = np.uint8(img.round())
-        img = np.flipud(img)
-        scaled.append(img.T)
-
-    rgbarray = np.array(scaled).T
-    return rgbarray
-
 def marshall15_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
 
     r = images[0] * scales[0]
@@ -182,8 +166,6 @@ def make_full_rgb(sci_list, light_list, source_list, outname='rgb.png'):
             rgbsets.append((i, i, i))
 
     nsets = len(rgbsets)
-
-    fullim = Image.new
 
     s = (5*sci_list[0].shape[1], sci_list[0].shape[0])
     fullim = Image.new('RGB', (s[0], nsets*s[1]), 'black')
