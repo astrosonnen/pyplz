@@ -2,28 +2,30 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def marshall15_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
+def marshall16_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
 
     r = images[0] * scales[0]
     g = images[1] * scales[1]
     b = images[2] * scales[2]
 
-    I = (r + g + b)/3.
+    I = (r + g + b)
     f = np.arcsinh(alpha*I*Q)
 
     R = r*f/(I*Q)
     G = g*f/(I*Q)
     B = b*f/(I*Q)
 
-    M = max(R.max(), G.max(), B.max())
-
-    R = R/M * 255.
-    G = G/M * 255.
-    B = B/M * 255.
+    R = R * 255.
+    G = G * 255.
+    B = B * 255.
 
     R[R<0.] = 0.
     G[G<0.] = 0.
     B[B<0.] = 0.
+
+    R[R>255.] = 255.
+    G[G>255.] = 255.
+    B[B>255.] = 255.
 
     flatlist = []
     for img in [R, G, B]:
