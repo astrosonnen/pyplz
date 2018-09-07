@@ -1,5 +1,4 @@
 import emcee
-import pymc
 import numpy as np
 import h5py
 from scipy.stats import truncnorm
@@ -225,6 +224,7 @@ def run_mcmc(model, chainname, walkers=100, nsteps=1000):
 
 def run_pymc(model, chainname, nsteps=11000, burnin=1000):
 
+    import pymc
     npars = len(model.pars)
 
     light_photoz_zgrids = {}
