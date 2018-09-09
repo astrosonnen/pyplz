@@ -30,7 +30,12 @@ def read_config(filename):
             if len(line) > 0:
                 parname = line[0].split(':')[0]
                 if parname in config:
-                    config[parname] = lines[i].split('#')[0].split(':')[1].split('\n')[0].strip()
+                    parval = lines[i].split('#')[0].split(':')[1].split('\n')[0].strip()
+                    if '_dir' in parname:
+                        config[parname] = os.path.expandvars(parval)
+                    else:
+                        config[parname] = parval
+
         i += 1
 
     filtlist = []
