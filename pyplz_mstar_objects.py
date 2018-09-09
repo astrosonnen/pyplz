@@ -31,10 +31,7 @@ def read_config(filename):
                 parname = line[0].split(':')[0]
                 if parname in config:
                     parval = lines[i].split('#')[0].split(':')[1].split('\n')[0].strip()
-                    if '_dir' in parname:
-                        config[parname] = os.path.expandvars(parval)
-                    else:
-                        config[parname] = parval
+                    config[parname] = parval
 
         i += 1
 
@@ -326,13 +323,13 @@ class PyPLZModel:
         
             filtnames[band] = filtname
 
-            hdu = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['science_tag'])[0]
+            hdu = pyfits.open(os.path.expandvars(config['data_dir'])+'/'+config['filename']+'_%s'%band+config['science_tag'])[0]
         
             img = hdu.data.copy()
             subimg = img.copy()
             self.sci[band] = subimg
-            suberr = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['err_tag'])[0].data.copy()
-        
+            suberr = pyfits.open(os.path.expandvars(config['data_dir'])+'/'+config['filename']+'_%s'%band+config['err_tag'])[0].data.copy()
+
             if config['err_type'] == 'VAR':
                 self.err[band] = suberr**0.5
             elif config['err_type'] == 'SIGMA':
@@ -340,7 +337,7 @@ class PyPLZModel:
             else:
                 df
         
-            psf_file = pyfits.open(config['data_dir']+'/'+config['filename']+'_%s'%band+config['psf_tag'])
+            psf_file = pyfits.open(os.path.expandvars(config['data_dir'])+'/'+config['filename']+'_%s'%band+config['psf_tag'])
             nhdu = len(psf_file)
             found = False
             n = 0
@@ -374,7 +371,7 @@ class PyPLZModel:
         if config['mask_dir'] is None:
             mask_dir = './'
         else:
-            mask_dir = config['mask_dir']
+            mask_dir = os.path.expandvars(config['mask_dir'])
         
         if config['maskname'] is not None:
             MASK = pyfits.open(mask_dir+config['maskname'])[0].data.copy()
