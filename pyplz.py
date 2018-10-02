@@ -65,7 +65,18 @@ for configfile in confnames:
     if key == 'M' or key == 'l':
    
         chainname = config['output_dir']+configfile+'_chain.hdf5'
-        pyplz_fitters.run_mcmc(model, chainname, config['Nwalkers'], config['Nsteps'])
+        if len(sys.argv) > 3:
+            npars = len(model.pars)
+            old_chainname = sys.argv[3]
+            print 'starting model from last iteration in %s'%old_chainname
+            old_chain = h5py.File(old_chainname, 'r')
+            walkers = np.zeros((config['Nwalkers'], npars))
+            for i in range(npars):
+                walkers[:, i] = old_chain[model.index2par[i]][:, -1]
+        else:
+            walkers = config['Nwalkers']
+
+        pyplz_fitters.run_mcmc(model, chainname, walkers, config['Nsteps'])
 
         chain = h5py.File(chainname, 'r')
 
