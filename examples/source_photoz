@@ -7,7 +7,7 @@ err_type: VAR
 psf_tag: _psf.fits
 rmax: 20.0
 Nwalkers: 100
-Nsteps: 1000
+Nsteps: 500
 main_band: i
 filter_prefix: HSC-
 filter_suffix: .txt
