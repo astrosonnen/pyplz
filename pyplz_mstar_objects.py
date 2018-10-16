@@ -1,5 +1,6 @@
 import numpy as np
-from imageSim import SBModels, SEDModels, convolve, plotting_tools
+from imageSim import SBModels, SEDModels, convolve
+import pyplz_rgbtools
 from pylens import pylens, MassModels
 from astropy.io import fits as pyfits
 import os
@@ -771,7 +772,7 @@ class PyPLZModel:
                     smodel += source[band]
                 source_list.append(smodel)
             
-            plotting_tools.make_full_rgb(sci_list, light_list, source_list, outname=rgbname)
+            pyplz_rgbtools.make_full_rgb(sci_list, light_list, source_list, outname=rgbname)
 
     def write_config_file(self, config, outname):
     
