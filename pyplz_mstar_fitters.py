@@ -9,18 +9,23 @@ import pyplz_cosmology
 from pyplz_cosmology import omegaL, omegaM
 
 
-def run_mcmc(model, chainname, nwalkers=100, nsteps=1000):
+def run_mcmc(model, chainname, walkers=100, nsteps=1000):
 
-    start = []
     npars = len(model.pars)
 
-    for j in range(npars):
+    if type(walkers) == int:
+        nwalkers = walkers
 
-        a, b = (model.pars[j].lower - model.pars[j].value)/model.pars[j].step, (model.pars[j].upper - model.pars[j].value)/model.pars[j].step
-        tmp = truncnorm.rvs(a, b, size=nwalkers)*model.pars[j].step + model.pars[j].value
-        start.append(tmp)
+        start = []
+        for j in range(npars):
+            a, b = (model.pars[j].lower - model.pars[j].value)/model.pars[j].step, (model.pars[j].upper - model.pars[j].value)/model.pars[j].step
+            tmp = truncnorm.rvs(a, b, size=nwalkers)*model.pars[j].step + model.pars[j].value
+            start.append(tmp)
 
-    start = np.array(start).T
+        start = np.array(start).T
+    else:
+        start = walkers
+        nwalkers = start.shape[0]
 
     def logprior(allpars):
         for i in range(npars):
