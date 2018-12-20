@@ -17,7 +17,7 @@ for i in range(nz):
 
 comovd_spline = splrep(z_grid, comovd_grid)
  
-def run_mcmc(model, chainname, walkers=100, nsteps=1000, nthread=1):
+def run_mcmc(model, chainname, walkers=100, nsteps=1000):
 
     npars = len(model.pars)
 
@@ -163,7 +163,7 @@ def run_mcmc(model, chainname, walkers=100, nsteps=1000, nthread=1):
      
         return logp, allmags + alluvpriors
 
-    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc, threads=nthread)
+    sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc)
 
     print "fitting model..."
 
