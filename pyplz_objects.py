@@ -18,7 +18,7 @@ def read_config(filename):
     config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'sps_model_dir': None, 'filters': None, 'main_band': None, \
               'zeropoints': None, \
               'filename': None, 'filter_prefix': '', 'filter_suffix': '', 'science_tag':'_sci.fits', 'err_tag':'_var.fits', 'err_type': 'VAR', 'psf_tag':'_psf.fits', \
-              'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
+              'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'Nthread': 1, 'burnin':None, 'maskname':None, \
               'rgbcuts': None, 'outname': None}
 
     preamble = True
@@ -61,6 +61,7 @@ def read_config(filename):
     config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
     config['Nsteps'] = int(config['Nsteps'])
     config['Nwalkers'] = int(config['Nwalkers'])
+    config['Nthread'] = int(config['Nthread'])
     if config['burnin'] is not None:
         config['burnin'] = int(config['burnin'])
     config['rmax'] = float(config['rmax'])
@@ -719,7 +720,7 @@ class PyPLZModel:
     def write_config_file(self, config, outname):
     
         conflines = []
-        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'sps_model_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
+        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'sps_model_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'Nthread', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
         for parname in confpars:
             if config[parname] is not None:
                 conflines.append('%s: %s\n'%(parname, config[parname]))

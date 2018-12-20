@@ -76,7 +76,7 @@ for configfile in confnames:
         else:
             walkers = config['Nwalkers']
 
-        pyplz_fitters.run_mcmc(model, chainname, walkers, config['Nsteps'])
+        pyplz_fitters.run_mcmc(model, chainname, walkers, config['Nsteps'], config['Nthread'])
 
         chain = h5py.File(chainname, 'r')
 
