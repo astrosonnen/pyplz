@@ -463,7 +463,7 @@ class PyPLZModel:
 
         for source in self.source_sb_models:
             source.amp = 1.
-            spix.append(source.pixeval(self.X, self.Y))
+            spix.append(source.pixeval(xl, yl))
 
         chi2sum = 0.
 
