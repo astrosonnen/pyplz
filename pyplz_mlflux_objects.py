@@ -637,7 +637,7 @@ class PyPLZModel:
         ncomp = 0
     
         for comp, mags in zip(config['source_components'], self.source_mags):
-            lightpars = SBModels.parlists[comp['class']]    
+            sourcepars = SBModels.parlists[comp['class']]    
    
             conflines.append('\n')
             conflines.append('source_model Sersic MLflux\n')
