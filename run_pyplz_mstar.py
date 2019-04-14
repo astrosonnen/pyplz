@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import h5py
 import os
-import pyplz_mstar_objects, pyplz_mstar_fitters
+import pyplz_freeamp, pyplz_freeamp_fitters
 
 
 inputfound = False
@@ -53,8 +53,8 @@ for configfile in confnames:
 
     print configfile
 
-    config = pyplz_mstar_objects.read_config(configfile)
-    model = pyplz_mstar_objects.PyPLZModel(config)
+    config = pyplz_freeamp.read_config(configfile)
+    model = pyplz_freeamp.PyPLZModel(config)
 
     if key == 'M' or key == 'l':
    
@@ -70,7 +70,7 @@ for configfile in confnames:
         else:
             walkers = config['Nwalkers']
 
-        pyplz_mstar_fitters.run_mcmc(model, chainname, walkers, config['Nsteps'])
+        pyplz_freeamp_fitters.run_mcmc(model, chainname, walkers, config['Nsteps'])
 
         chain = h5py.File(chainname, 'r')
 
