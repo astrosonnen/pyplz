@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import h5py
 import os
-import pyplz_mlflux_objects
+import pyplz_basic
 import emcee
 from scipy.stats import truncnorm
 
@@ -30,8 +30,8 @@ for i in range(nkeys):
 if configfile is not None:
     print configfile
 
-    config = pyplz_mlflux_objects.read_config(configfile)
-    model = pyplz_mlflux_objects.PyPLZModel(config)
+    config = pyplz_basic.read_config(configfile)
+    model = pyplz_basic.PyPLZModel(config)
 
     chainname = config['output_dir']+configfile+'_chain.hdf5'
 
