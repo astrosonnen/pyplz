@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import splrep, splev
+from scipy.interpolate import splrep, splev, splint
 import os
 import cPickle
 import pyplz_cosmology
@@ -182,7 +182,7 @@ class Template:
         temp_coeffs = [a1, a2]
         temp_ind = [n1, n2]
 
-        temp_fnus = []
+        temp_fband = []
         for n in temp_ind:
 
             flambda = self.templates[n][1].copy()
@@ -190,23 +190,36 @@ class Template:
 
             wobs = wav * (1. + zs)
 
-            fnus_here = []
+            fband_here = []
+
             for band in bands_here:
                 wrange = (wobs > self.filtranges[band][0]) & (wobs < self.filtranges[band][1])
                 wband = wobs[wrange]
-                fband = flambda[wrange]
+                flambda_here = flambda[wrange]
 
                 if madau:
                     madau_corr = etau_madau(wband, zs)
-                    fband *= madau_corr
+                    flambda_here *= madau_corr
 
-                fnu = fband * wband**2
+                nu_here = 1./wband
+                fnu_here = flambda_here/nu_here**2
                 weights = splev(wband, self.filtsplines[band])
-                fnus_here.append((fnu * weights).sum()/weights.sum())
 
-            temp_fnus.append(fnus_here)
+                nu_here = nu_here[::-1]
+                fnu_here = fnu_here[::-1]
+                weights = weights[::-1]
 
-        ratio = (a1 * temp_fnus[0][0] + a2 * temp_fnus[1][0]) / (a1 * temp_fnus[0][1] + a2 * temp_fnus[1][1])
+                num_integrand = splrep(nu_here, weights * fnu_here / nu_here)
+                den_integrand = splrep(nu_here, weights / nu_here) 
+
+                num = splint(nu_here[0], nu_here[-1], num_integrand)
+                den = splint(nu_here[0], nu_here[-1], den_integrand)
+
+                fband_here.append(num/den)
+
+            temp_fband.append(fband_here)
+
+        ratio = (a1 * temp_fband[0][0] + a2 * temp_fband[1][0]) / (a1 * temp_fband[0][1] + a2 * temp_fband[1][1])
 
         return ratio * 10.**((self.zp[band2] - self.zp[band1])/2.5)
 
