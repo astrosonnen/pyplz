@@ -209,8 +209,8 @@ class Template:
                 fnu_here = fnu_here[::-1]
                 weights = weights[::-1]
 
-                num_integrand = splrep(nu_here, weights * fnu_here / nu_here)
-                den_integrand = splrep(nu_here, weights / nu_here) 
+                num_integrand = splrep(nu_here, weights * fnu_here / nu_here, k=1)
+                den_integrand = splrep(nu_here, weights / nu_here, k=1) 
 
                 num = splint(nu_here[0], nu_here[-1], num_integrand)
                 den = splint(nu_here[0], nu_here[-1], den_integrand)
