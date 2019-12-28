@@ -1,4 +1,4 @@
-import SBProfiles as SBProfiles
+from imageSim import SBProfiles as SBProfiles
 from math import pi
 import numpy as np
 from scipy.interpolate import splrep, splev
@@ -19,15 +19,15 @@ class SBModel:
         if 'amp' not in pars.keys() and 'logamp' not in pars.keys():
             pars['amp'] = 1.
         self.keys = pars.keys()
-        self.keys.sort()
-        if self.keys not in self._SBkeys:
+        keylist = sorted(self.keys)
+        if keylist not in self._SBkeys:
             import sys
-            print 'Not all (or too many) parameters were defined!'
+            print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
         self.vmap = {}
         self.pars = pars
-        for key in self.keys:
+        for key in keylist:
             try:
                 v = self.pars[key].value
                 self.vmap[key] = self.pars[key]
@@ -135,8 +135,8 @@ class PointSource(PixelizedModel):
         self.keys.sort()
         if self.keys!=['amp', 'x', 'y']:
             import sys
-            print 'Not all (or too many) parameters were defined!'
-            print self.keys
+            print('Not all (or too many) parameters were defined!')
+            print(self.keys)
             sys.exit()
         PixelizedModel.__init__(self, model)
         self.vmap = {}

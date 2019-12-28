@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import splrep, splev, splint
 import os
-import cPickle
+import pickle
 import pyplz_cosmology
 import pyplz_dustlaw
 
@@ -34,8 +34,8 @@ def etau_madau(wl, z):
     i2=n-1
     #Lyman series absorption
     for i in range(len(l)):
-	i2=np.searchsorted(wl[i1:i2],l[i]*xe)
-	tau[i1:i2]=tau[i1:i2]+c[i]*(wl[i1:i2]/l[i])**3.46
+        i2=np.searchsorted(wl[i1:i2],l[i]*xe)
+        tau[i1:i2]=tau[i1:i2]+c[i]*(wl[i1:i2]/l[i])**3.46
 
     if ll*xe < wl[0]:
         return np.exp(-tau)
@@ -314,10 +314,9 @@ class SPS:
         
             filtwav = (ftable[:, 0] * ftable[:, 1]).sum() / ftable[:, 1].sum()
             self.extinction_corr[band] = extinct(filtwav, ebmv)
-            print band, filtwav, self.extinction_corr[band]
 
         f = open(modelname, 'rb')
-        self.model = cPickle.load(f)
+        self.model = pickle.load(f)
         f.close()
 
         if restmodelname is not None:

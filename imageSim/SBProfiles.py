@@ -24,9 +24,23 @@ class Sersic:
         R = r/self.re
         return self.amp*np.exp(-k*(R**(1./self.n) - 1.))
 
+    def coords2rcirc(self,x,y):
+        from math import pi,cos as COS,sin as SIN
+        shape = x.shape
+        x = x.ravel()
+        y = y.ravel()
+
+        cos = COS(self.pa*pi/180.)
+        sin = SIN(self.pa*pi/180.)
+        xp = (x-self.x)*cos+(y-self.y)*sin
+        yp = (y-self.y)*cos-(x-self.x)*sin
+        r = (self.q*xp**2+yp**2/self.q)**0.5
+        return r
+
     def pixeval(self,x,y,scale=1,csub=23):
         from scipy import interpolate
         from math import pi,cos as COS,sin as SIN
+
         shape = x.shape
         x = x.ravel()
         y = y.ravel()

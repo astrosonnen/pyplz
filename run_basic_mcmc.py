@@ -11,7 +11,7 @@ nargv = len(sys.argv)
 configfile = None
 old_chainname = None
 
-nkeys = (len(sys.argv) - 1)/2
+nkeys = (len(sys.argv) - 1)//2
 
 allowed_keys = ['-M', '-o']
 
@@ -19,7 +19,7 @@ for i in range(nkeys):
     key = sys.argv[2*i+1]
     arg = sys.argv[2*i+2]
     if not key in allowed_keys:
-        print 'unrecognized option: %s'%key
+        print('unrecognized option: %s'%key)
         df
     else:
         if key == '-M':
@@ -28,7 +28,7 @@ for i in range(nkeys):
             old_chainname = arg
 
 if configfile is not None:
-    print configfile
+    print(configfile)
 
     config = pyplz_basic.read_config(configfile)
     model = pyplz_basic.PyPLZModel(config)
@@ -36,9 +36,10 @@ if configfile is not None:
     chainname = config['output_dir']+configfile+'_chain.hdf5'
 
     npars = len(model.pars)
+    nbands = len(model.bands)
 
     if old_chainname is not None:
-        print 'starting model from last iteration in %s'%old_chainname
+        print('starting model from last iteration in %s'%old_chainname)
         old_chain = h5py.File(old_chainname, 'r')
         start = np.zeros((config['Nwalkers'], npars))
         for i in range(npars):
@@ -58,19 +59,23 @@ if configfile is not None:
                 return -np.inf
         return 0.
 
-    fakemags = []
+    fakemags = np.zeros((model.nlight+model.nsource, nbands))
 
     for i in range(model.nlight):
-        magdic = {}
-        for band in model.bands:
-            magdic[band] = 99.
-        fakemags.append(magdic)
+        #magdic = {}
+        #for band in model.bands:
+        #    magdic[band] = 99.
+        #fakemags.append(magdic)
+        for n in range(nbands):
+            fakemags[i, n] = 99.
 
     for i in range(model.nsource):
-        magdic = {}
-        for band in model.bands:
-            magdic[band] = 99.
-        fakemags.append(magdic)
+        #magdic = {}
+        #for band in model.bands:
+        #    magdic[band] = 99.
+        #fakemags.append(magdic)
+        for n in range(nbands):
+             fakemags[model.nlight+i, n] = 99.
 
     def logpfunc(allpars):
         lp = logprior(allpars)
@@ -88,25 +93,29 @@ if configfile is not None:
         if logp != logp:
             return -np.inf, fakemags
 
-        allmags = []
+        allmags = np.zeros((model.nlight+model.nsource, nbands))
 
         for i in range(model.nlight):
-            magdic = {}
-            for band in model.light_mags[i]:
-                magdic[band] = model.light_mags[i][band]
-            allmags.append(magdic)
+            #magdic = {}
+            #for band in model.light_mags[i]:
+            #    magdic[band] = model.light_mags[i][band]
+            #allmags.append(magdic)
+            for n in range(nbands):
+                allmags[i, n] = model.light_mags[i][model.bands[n]]
     
         for i in range(model.nsource):
-            magdic = {}
-            for band in model.source_mags[i]:
-                magdic[band] = model.source_mags[i][band]
-            allmags.append(magdic)
+            #magdic = {}
+            #for band in model.source_mags[i]:
+            #    magdic[band] = model.source_mags[i][band]
+            #allmags.append(magdic)
+            for n in range(nbands):
+                allmags[model.nlight+i, n] = model.source_mags[i][model.bands[n]]
      
         return logp, allmags
 
     sampler = emcee.EnsembleSampler(nwalkers, npars, logpfunc, threads=config['Nthreads'])
 
-    print "fitting model..."
+    print("fitting model...")
 
     sampler.run_mcmc(start, config['Nsteps'])
 
@@ -129,11 +138,15 @@ if configfile is not None:
 
     for i in range(config['Nsteps']):
         for j in range(nwalkers):
-            for band in model.bands:
+            #for band in model.bands:
+            for n in range(nbands):
                 for l in range(model.nlight):
-                    outchain['light%d.mag_%s'%(l+1, band)][j, i] = magschain[i][j][l][band]
-                for s in range(model.nsource):
-                    outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][model.nlight+s][band]
+                    #outchain['light%d.mag_%s'%(l+1, band)][j, i] = magschain[i][j][l][band]
+                    outchain['light%d.mag_%s'%(l+1, model.bands[n])][j, i] = magschain[i][j][l*nbands+n]
+                if model.nsource > 0:
+                    for s in range(model.nsource):
+                        #outchain['source%d.mag_%s'%(s+1, band)][j, i] = magschain[i][j][model.nlight+s][band]
+                        outchain['source%d.mag_%s'%(s+1, model.bands[n])][j, i] = magschain[i][j][(model.nlight+s)*nbands+n]
 
     h5py_file = h5py.File(chainname, 'w')
     for par in outchain:

@@ -103,7 +103,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     light_components.append(comp)
 
@@ -141,7 +141,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     source_components.append(comp)
 
@@ -176,7 +176,7 @@ def read_config(filename):
                 i += j
 
                 if foundpars < npars:
-                    print 'not all parameters found!'
+                    print('not all parameters found!')
                 else:
                     lens_components.append(comp)
 

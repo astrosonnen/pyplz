@@ -1,18 +1,19 @@
-import MassProfiles
+from pylens import MassProfiles
 from math import pi
 
 class MassModel:
     def __init__(self,name,pars):
         self.keys = pars.keys()
-        self.keys.sort()
-        if self.keys not in self._MMkeys:
+        #self.keys.sort()
+        keylist = sorted(self.keys)
+        if keylist not in self._MMkeys:
             import sys
-            print 'Not all (or too many) parameters were defined!'
+            print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
         self.vmap = {}
         self.pars = pars
-        for key in self.keys:
+        for key in keylist:
             try:
                 v = self.pars[key].value
                 self.vmap[key] = self.pars[key]
