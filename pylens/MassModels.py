@@ -1,4 +1,5 @@
 from pylens import MassProfiles
+#import MassProfiles
 from math import pi
 
 class MassModel:
