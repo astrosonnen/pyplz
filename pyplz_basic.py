@@ -1,7 +1,7 @@
 import numpy as np
 from imageSim import SBModels, SEDModels, convolve
 import pyplz_rgbtools
-from pylens import pylens, MassModels
+from pylens import deflections as pylens, MassModels
 from scipy.optimize import nnls
 from astropy.io import fits as pyfits
 import os
