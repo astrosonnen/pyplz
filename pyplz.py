@@ -2,7 +2,8 @@ import numpy as np
 import sys
 import h5py
 import os
-import pyplz_objects, pyplz_fitters
+from pyplz_configtools import read_config
+import pyplz_basic, pyplz_sedfit, pyplz_fitters
 
 
 inputfound = False
@@ -27,21 +28,15 @@ while i <= nargv and not inputfound:
             catlist = True
             inputfile = sys.argv[i+1]
             inputfound = True
-        elif key == 'o':
-            inputfile = sys.argv[i+1]
-            inputfound = True
         elif key == 'M':
             inputfile = sys.argv[i+1]
             inputfound = True
-        elif key == 'p':
-            inputfile = sys.argv[i+1]
-            inputfound = True
         else:
-            print 'unknown option -%s'%key
-            df
+            sys.exit('unknown option -%s'%key)
+
     else:
-        print 'must specify mode: -s, -l, -o, -M, -c'
-        df
+        sys.exit('must specify mode: -s, -l, -M, -c')
+
     i += 1
 
 confnames = []
@@ -57,10 +52,15 @@ else:
 
 for configfile in confnames:
 
-    print configfile
+    print(configfile)
 
-    config = pyplz_objects.read_config(configfile)
-    model = pyplz_objects.PyPLZModel(config)
+    config = read_config(configfile)
+    if config['modeltype'] == 'standard':
+        model = pyplz_basic.PyPLZModel(config)
+    elif config['modeltype'] == 'SED':
+        model = pyplz_sedfit.PyPLZModel(config)
+    else:
+        sys.exit("'modeltype' can either be 'standard' or 'SED'")
 
     if key == 'M' or key == 'l':
    
@@ -68,7 +68,7 @@ for configfile in confnames:
         if len(sys.argv) > 3:
             npars = len(model.pars)
             old_chainname = sys.argv[3]
-            print 'starting model from last iteration in %s'%old_chainname
+            print('starting model from last iteration in %s'%old_chainname)
             old_chain = h5py.File(old_chainname, 'r')
             walkers = np.zeros((config['Nwalkers'], npars))
             for i in range(npars):
@@ -91,24 +91,6 @@ for configfile in confnames:
         model.save(modelname)
         model.write_config_file(config, modelname)
 
-    elif key == 'p':
-   
-        chainname = config['output_dir']+configfile+'_pymcchain.hdf5'
-        pyplz_fitters.run_pymc(model, chainname, nsteps=config['Nsteps'], burnin=config['burnin'])
-
-        chain = h5py.File(chainname, 'r')
-
-        ML = chain['logp'].value.argmax()
-        modelname = config['output_dir']+configfile+'_ML'
-        for i in range(len(model.pars)):
-            model.pars[i].value = chain['%s'%model.index2par[i]].value[ML]
-
-        model.update()
-        model.optimize_amp()
-
-        model.save(modelname)
-        model.write_config_file(config, modelname)
- 
     elif key == 'c':
     
         chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
@@ -122,14 +104,6 @@ for configfile in confnames:
 
         model.write_config_file(config, modelname)
   
-    elif key == 'o':
-        
-        pyplz_fitters.optimize(model, config['Nsteps'])
-        modelname = config['output_dir']+configfile+'_optimized'
-
-        model.save(modelname)
-        model.write_config_file(config, modelname)
-   
     elif key == 's':
 
         modelname = config['output_dir']+configfile
@@ -138,5 +112,4 @@ for configfile in confnames:
         model.optimize_amp()
 
         model.save(modelname)
-
 

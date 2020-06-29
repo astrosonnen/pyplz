@@ -9,17 +9,18 @@ err_type: VAR
 psf_tag: _psf.fits
 rmax: 20.
 Nwalkers: 50
-Nsteps: 500
-main_band: i
+Nsteps: 200
+reference_band: i
 filter_prefix: HSC-
 filter_suffix: .txt
 filters: g, r, i, z, y
 zeropoints: 27.000000, 27., 27., 27., 27.
+modeltype: SED
 
 
 # MODELS
 
-light_model Sersic freecolors
+light_model Sersic colorpars
 x 50. 48.000000 52.000000 0.300000 1
 y 50. 48.000000 52.000000 0.300000 1
 pa 0.119360 -90.000000 90.000000 5.000000 1

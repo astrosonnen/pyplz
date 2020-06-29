@@ -10,11 +10,12 @@ psf_tag: _psf.fits
 rmax: 20.0
 Nwalkers: 50
 Nsteps: 500
-main_band: i
+reference_band: i
 filter_prefix: HSC-
 filter_suffix: .txt
 filters: g, r, i, z, y
 zeropoints: 27.000000, 27.000000, 27.000000, 27.000000, 27.000000
+modeltype: SED
 
 # MODELS
 

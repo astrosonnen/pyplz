@@ -1,223 +1,11 @@
 import numpy as np
 from imageSim import SBModels, SEDModels, convolve
+from pyplz_configtools import read_config
 import pyplz_rgbtools
 from pylens import deflections as pylens, MassModels
 from scipy.optimize import nnls
 from astropy.io import fits as pyfits
 import os
-
-
-rootdir = os.environ.get('PYPLZDIR')
-
-def read_config(filename):
-
-    f = open(filename, 'r')
-    lines = f.readlines()
-    f.close()
-
-    config = {'data_dir':'./', 'mask_dir': None, 'output_dir':'./', 'sps_model_dir': None, 'filters': None, 'main_band': None, \
-              'zeropoints': None, \
-              'filename': None, 'filter_prefix': '', 'filter_suffix': '', 'science_tag':'_sci.fits', 'err_tag':'_var.fits', 'err_type': 'VAR', 'psf_tag':'_psf.fits', \
-              'rmax': None, 'Nsteps':300, 'Nwalkers':30, 'burnin':None, 'maskname':None, \
-              'rgbcuts': None, 'outname': None}
-
-    preamble = True
-
-    i = 0
-    while preamble and i < len(lines):
-        if '#' in lines[i] and 'MODELS' in lines[i]:
-            preamble = False
-        else:
-            line = lines[i].split('#')[0].split()
-            if len(line) > 0:
-                parname = line[0].split(':')[0]
-                if parname in config:
-                    parval = lines[i].split('#')[0].split(':')[1].split('\n')[0].strip()
-                    config[parname] = parval
-
-        i += 1
-
-    filtlist = []
-    filternames = config['filters'].split(',')
-    for name in filternames:
-        filtlist.append(name.strip())
-    config['filters'] = filtlist
-
-    config['colors'] = []
-    for band in config['filters']:
-        if band != config['main_band']:
-            config['colors'].append('%s-%s'%(band, config['main_band']))
-
-    if config['rgbcuts'] is not None:
-        cutlist = []
-        cuts = config['rgbcuts'].split(',')
-        for cut in cuts:
-            cutlist.append(float(cut))
-
-        config['rgbcuts'] = cutlist
-    else:
-        config['rgbcuts'] = (99., 99., 99.)
-
-    config['zeropoints'] = np.array(config['zeropoints'].split(','), dtype='float')
-    config['Nsteps'] = int(config['Nsteps'])
-    config['Nwalkers'] = int(config['Nwalkers'])
-    if config['burnin'] is not None:
-        config['burnin'] = int(config['burnin'])
-    config['rmax'] = float(config['rmax'])
-
-    light_components = []
-    lens_components = []
-    source_components = []
-
-    while i < len(lines):
-
-        line = lines[i].split()
-        if len(line) > 0:
-            if line[0] == 'light_model':
-                model_class = line[1]
-                sed_class = line[2]
-
-                if model_class in SBModels.parlists:
-                    parnames = []
-                    for parname in SBModels.parlists[model_class]:
-                        parnames.append(parname)
-                else:
-                    df
-
-                sps_model = None
-                if sed_class == 'freecolors':
-                    parnames += config['colors']
-                elif sed_class == 'template':
-                    parnames += ['zs', 'tn']
-                elif sed_class == 'sps':
-                    sps_model = line[3]
-                    parnames += ['redshift', 'age', 'tau', 'logZ', 'logtau_V']
-                else:
-                    df
-
-                npars = len(parnames)
-
-                comp = {'class':model_class, 'pars':{}, 'sed': sed_class}
-                if sps_model is not None:
-                    comp['sps_model'] = sps_model
-
-                foundpars = 0
-                j = 1
-
-                while foundpars < npars and j+i < len(lines):
-                    line = lines[j+i].split()
-                    if lines[j+i][0] != '#' and len(line) > 0:
-                        if line[0] in parnames:
-                            foundpars += 1
-                            par = line[0]
-                            link = None
-                            if len(line) > 6:
-                                link = line[6]
-                            tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
-                           'step': float(line[4]), 'var': int(line[5]), 'link':link}
-                            comp['pars'][par] = tmp_par
-                    j += 1
-
-                i += j
-
-                if foundpars < npars:
-                    print('not all parameters found!')
-                else:
-                    light_components.append(comp)
-
-            elif line[0] == 'source_model':
-                model_class = line[1].strip()
-                sed_class = line[2]
-
-                if model_class in ['Sersic']:
-                    parnames = []
-                    for parname in SBModels.parlists[model_class]:
-                        parnames.append(parname)
-                else:
-                    df
-
-                if sed_class == 'freecolors':
-                    parnames += config['colors']
-                elif sed_class == 'template':
-                    parnames += ['zs', 'tn']
-                elif sed_class == 'sps':
-                    parnames += ['redshift', 'age', 'logZ', 'tau', 'logtau_V']
-                else:
-                    df
-
-                npars = len(parnames)
-
-                comp = {'class':model_class, 'sed': sed_class, 'pars':{}}
-
-                foundpars = 0
-                j = 1
-
-                while foundpars < npars and j+i < len(lines):
-                    line = lines[j+i].split()
-                    if lines[j+i][0] != '#' and len(line) > 0:
-                        if line[0] in parnames:
-                            foundpars += 1
-                            par = line[0]
-                            link = None
-                            if len(line) > 6:
-                                link = line[6]
-                            tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
-                           'step': float(line[4]), 'var': int(line[5]), 'link':link}
-                            comp['pars'][par] = tmp_par
-                    j += 1
-
-                i += j
-
-                if foundpars < npars:
-                    print('not all parameters found!')
-                else:
-                    source_components.append(comp)
-
-            elif 'lens_model' in line[0]:
-                model_class = line[1].strip()
-
-                if model_class == 'Powerlaw':
-                    npars = 6
-                    parnames = ['x', 'y', 'q', 'pa', 'b', 'eta']
-                else:
-                    df
-
-                comp = {'class': model_class, 'sed': sed_class, 'pars':{}}
-
-                foundpars = 0
-                j = 1
-
-                while foundpars < npars and j+i < len(lines):
-                    line = lines[j+i].split()
-                    if lines[j+i][0] != '#' and len(line) > 0:
-                        if line[0] in parnames:
-                            foundpars += 1
-                            par = line[0]
-                            link = None
-                            if len(line) > 6:
-                                link = line[6]
-                            tmp_par = {'value': float(line[1]), 'low': float(line[2]), 'up': float(line[3]), \
-                           'step': float(line[4]), 'var': int(line[5]), 'link':link}
-                            comp['pars'][par] = tmp_par
-                    j += 1
-
-                i += j
-
-                if foundpars < npars:
-                    print('not all parameters found!')
-                else:
-                    lens_components.append(comp)
-
-            else:
-                i += 1
-        else:
-            i += 1
-
-    config['light_components'] = light_components
-    config['source_components'] = source_components
-    config['lens_components'] = lens_components
-
-    return config
 
 
 class Par:
@@ -258,7 +46,7 @@ class PyPLZModel:
         # defines bands 
 
         self.bands = []
-        self.main_band = config['main_band']
+        self.reference_band = config['reference_band']
 
         for band in config['filters']:
             self.bands.append(band)
@@ -455,8 +243,8 @@ class PyPLZModel:
 
             self.light_sb_models.append(light)
 
-            if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.main_band, self.zp)
+            if comp['sed'] == 'colorpars':
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.reference_band, self.zp)
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, self.zp)
             elif comp['sed'] == 'sps':
@@ -502,8 +290,8 @@ class PyPLZModel:
                 df
 
             self.source_sb_models.append(source)
-            if comp['sed'] == 'freecolors':
-                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.main_band, zp=self.zp)
+            if comp['sed'] == 'colorpars':
+                sed = SEDModels.Colors('light_sed%d'%ncomp, sed_here, self.bands, self.reference_band, zp=self.zp)
             elif comp['sed'] == 'template':
                 sed = SEDModels.Template('light_sed%d'%ncomp, sed_here, filtnames, zp=self.zp)
             self.source_sed_models.append(sed)
@@ -544,15 +332,15 @@ class PyPLZModel:
             light.amp = 1.
             if light.__class__.__name__ == 'PointSource':
                 for i in range(self.nbands):
-                    scale = sed.scale(self.bands[i], self.main_band)
+                    scale = sed.scale(self.bands[i], self.reference_band)
                     lmodel[i*self.ny: (i+1)*self.ny, :] = light.pixeval(self.X, self.Y, self.bands[i])
-                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.reference_band]
             else:
                 lpix = light.pixeval(self.X, self.Y)
                 for i in range(self.nbands):
-                    scale = sed.scale(self.bands[i], self.main_band)
+                    scale = sed.scale(self.bands[i], self.reference_band)
                     lmodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(lpix, self.convol_matrix[self.bands[i]], False)[0]
-                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                    mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.reference_band]
             modlist.append((lmodel/self.errstack).ravel()[self.maskstack_r])
 
         for source, sed, mags in zip(self.source_sb_models, self.source_sed_models, self.source_mags):
@@ -560,9 +348,9 @@ class PyPLZModel:
             source.amp = 1.
             spix = source.pixeval(xl, yl)
             for i in range(self.nbands):
-                scale = sed.scale(self.bands[i], self.main_band)
+                scale = sed.scale(self.bands[i], self.reference_band)
                 smodel[i*self.ny: (i+1)*self.ny, :] = scale * convolve.convolve(spix, self.convol_matrix[self.bands[i]], False)[0]
-                mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.main_band]
+                mags[self.bands[i]] = -2.5*np.log10(scale) + self.zp[self.bands[i]] - self.zp[self.reference_band]
             modlist.append((smodel/self.errstack).ravel()[self.maskstack_r])
         
         modarr = np.array(modlist).T
@@ -577,11 +365,11 @@ class PyPLZModel:
                 
             if amps[i] > 0.:
                 light.amp *= amps[i]
-                mainmag = light.Mag(self.zp[self.main_band])
+                mainmag = light.Mag(self.zp[self.reference_band])
                 for band in self.bands:
                     mags[band] += mainmag
                 if sed.__class__.__name__ == 'SPS':
-                    mags['mstar'] = 10.**(-2./5.*(mainmag - sed.mags[self.main_band]))
+                    mags['mstar'] = 10.**(-2./5.*(mainmag - sed.mags[self.reference_band]))
             else:
                 for band in self.bands:
                     mags[band] = 99.
@@ -592,7 +380,7 @@ class PyPLZModel:
         for source, mags in zip(self.source_sb_models, self.source_mags):
             if amps[i] > 0.:
                 source.amp *= amps[i]
-                mainmag = source.Mag(self.zp[self.main_band])
+                mainmag = source.Mag(self.zp[self.reference_band])
                 for band in self.bands:
                     mags[band] = mags[band] + mainmag
             else:
@@ -608,8 +396,8 @@ class PyPLZModel:
         light_mags = []
         for light, sed in zip(self.light_sb_models, self.light_sed_models):
             if sed.__class__.__name__ == 'Template':
-                mainmag = light.Mag(self.zp[self.main_band])
-                scale = sed.restUV_scale(self.main_band)
+                mainmag = light.Mag(self.zp[self.reference_band])
+                scale = sed.restUV_scale(self.reference_band)
                 light_mags.append(mainmag - 2.5*np.log10(scale))
             else:
                 light_mags.append(None)
@@ -617,8 +405,8 @@ class PyPLZModel:
         source_mags = []
         for source, sed in zip(self.source_sb_models, self.source_sed_models):
             if sed.__class__.__name__ == 'Template':
-                mainmag = source.Mag(self.zp[self.main_band])
-                scale = sed.restUV_scale(self.main_band)
+                mainmag = source.Mag(self.zp[self.reference_band])
+                scale = sed.restUV_scale(self.reference_band)
                 source_mags.append(mainmag - 2.5*np.log10(scale))
             else:
                 source_mags.append(None)
@@ -646,13 +434,13 @@ class PyPLZModel:
             if light.__class__.__name__ == 'PointSource':
                 for band in self.bands:
                     hdr['%s.mag_%s'%(light.name, band)] = mags[band]
-                    scale = sed.scale(band, self.main_band)
+                    scale = sed.scale(band, self.reference_band)
                     light_ind_dic[band] = scale * light.pixeval(self.X, self.Y, band) 
             else:
                 lpix = light.pixeval(self.X, self.Y)
                 for band in self.bands:
                     hdr['%s.mag_%s'%(light.name, band)] = mags[band]
-                    scale = sed.scale(band, self.main_band)
+                    scale = sed.scale(band, self.reference_band)
                     light_ind_dic[band] = scale * convolve.convolve(lpix, self.convol_matrix[band], False)[0]
     
             light_ind_model.append(light_ind_dic)
@@ -667,7 +455,7 @@ class PyPLZModel:
         
             for band in self.bands:
                 hdr['%s.mag_%s'%(source.name, band)] = mags[band]
-                scale = sed.scale(band, self.main_band)
+                scale = sed.scale(band, self.reference_band)
                 source_ind_here = scale * convolve.convolve(spix, self.convol_matrix[band], False)[0]
     
                 source_ind_dic[band] = source_ind_here
@@ -719,7 +507,7 @@ class PyPLZModel:
     def write_config_file(self, config, outname):
     
         conflines = []
-        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'sps_model_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'main_band', 'filter_prefix', 'filter_suffix']
+        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'sps_model_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'reference_band', 'filter_prefix', 'filter_suffix', 'modeltype']
         for parname in confpars:
             if config[parname] is not None:
                 conflines.append('%s: %s\n'%(parname, config[parname]))
@@ -741,7 +529,7 @@ class PyPLZModel:
         ncomp = 0
         for comp, mags, uvmag in zip(config['light_components'], self.light_mags, light_uvmags):
     
-            if comp['sed'] == 'freecolors':
+            if comp['sed'] == 'colorpars':
                 lightpars = SBModels.parlists[comp['class']] + config['colors']
             elif comp['sed'] == 'template':
                 lightpars = SBModels.parlists[comp['class']] + ['zs', 'tn']
@@ -779,7 +567,7 @@ class PyPLZModel:
     
         for comp, mags, uvmag in zip(config['source_components'], self.source_mags, source_uvmags):
     
-            if comp['sed'] == 'freecolors':
+            if comp['sed'] == 'colorpars':
                 sourcepars = SBModels.parlists['Sersic'] + config['colors']
             elif comp['sed'] == 'template':
                 sourcepars = SBModels.parlists['Sersic'] + ['zs', 'tn']
