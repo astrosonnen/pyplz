@@ -87,7 +87,7 @@ def run_mcmc(model, chainname, walkers=100, nsteps=1000):
     sampler.run_mcmc(start, nsteps)
 
     chain = sampler.chain
-    magschain = sampler.blobs
+    magschain = sampler.blobs.reshape((nsteps, nwalkers, nbands))
 
     outchain = {}
     outchain['logp'] = sampler.lnprobability
