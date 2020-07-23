@@ -95,57 +95,60 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_one_rgb(sci, light_model, source_model, cuts=(99., 99., 99.)):
+def make_one_rgb(sci, model, cuts=(99., 99., 99.)):
 
     auto_cuts = []
     data = []
-    lensresid = []
     fullresid = []
     fullmodel = []
 
     i = 0
 
-    ncol = 5
+    ncomp = len(model)
+    ncol = 3 + ncomp
 
     for i in range(3):
         data.append(sci[i])
         cut = np.percentile(sci[i], cuts[i])
         auto_cuts.append(cut)
-
-        fullmodel.append(light_model[i] + source_model[i])
-        lensresid.append(sci[i] - light_model[i])
-        fullresid.append(sci[i] - light_model[i] - source_model[i])
+        tmp_fullmodel = 0.*sci[i]
+        for comp in model:
+            tmp_fullmodel += comp[i]
+        fullmodel.append(tmp_fullmodel)
+        fullresid.append(sci[i] - tmp_fullmodel)
 
     dlist = make_crazy_pil_format(data, auto_cuts)
-    slist = make_crazy_pil_format(source_model, auto_cuts)
-    rlist = make_crazy_pil_format(lensresid, auto_cuts)
     fmlist = make_crazy_pil_format(fullmodel, auto_cuts)
     frlist = make_crazy_pil_format(fullresid, auto_cuts)
 
     s = (data[0].shape[1], data[0].shape[0])
+    im = Image.new('RGB', (ncol*data[0].shape[0], data[0].shape[1]), 'black')
+    
     dim = Image.new('RGB', s, 'black')
-    rim = Image.new('RGB', s, 'black')
-    sim = Image.new('RGB', s, 'black')
     fmim = Image.new('RGB', s, 'black')
     frim = Image.new('RGB', s, 'black')
 
     dim.putdata(dlist)
-    sim.putdata(slist)
-    rim.putdata(rlist)
     fmim.putdata(fmlist)
     frim.putdata(frlist)
 
-    im = Image.new('RGB', (ncol*data[0].shape[0], data[0].shape[1]), 'black')
-
     im.paste(dim, (0, 0,))
     im.paste(fmim, (1*s[1], 0))
-    im.paste(rim, (2*s[1], 0))
-    im.paste(sim, (3*s[1], 0))
-    im.paste(frim, (4*s[1], 0))
+    im.paste(frim, ((ncol-1)*s[1], 0))
+
+    for n in range(ncomp):
+        rgb_list = []
+        for i in range(3):
+            rgb_list.append(model[n][i])
+        dlist = make_crazy_pil_format(rgb_list, auto_cuts)
+        dim = Image.new('RGB', s, 'black')
+        dim.putdata(dlist)
+        im.paste(dim, ((2+n)*s[1], 0,))
 
     return im
 
-def make_full_rgb(sci_list, light_list, source_list, outname='rgb.png'):
+
+def make_full_rgb(sci_list, comp_list, outname='rgb.png'):
 
     rgbsets = []
     ntotbands = len(sci_list)
@@ -169,18 +172,25 @@ def make_full_rgb(sci_list, light_list, source_list, outname='rgb.png'):
 
     nsets = len(rgbsets)
 
-    s = (5*sci_list[0].shape[1], sci_list[0].shape[0])
+    ncomp = len(comp_list[0])
+    ncol = 3 + ncomp
+
+    s = (ncol*sci_list[0].shape[1], sci_list[0].shape[0])
     fullim = Image.new('RGB', (s[0], nsets*s[1]), 'black')
 
     for i in range(nsets):
         sci_here = []
-        light_here = []
-        source_here = []
         for ind in rgbsets[i]:
             sci_here.append(sci_list[ind])
-            light_here.append(light_list[ind])
-            source_here.append(source_list[ind])
-        im = make_one_rgb(sci_here, light_here, source_here)
+
+        model_list = []
+        for n in range(ncomp):
+            model_here = []
+            for ind in rgbsets[i]:
+                model_here.append(comp_list[ind][n])
+            model_list.append(model_here)
+
+        im = make_one_rgb(sci_here, model_list)
 
         fullim.paste(im, (0, i*s[1]))
 
