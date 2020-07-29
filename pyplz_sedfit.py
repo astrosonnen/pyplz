@@ -489,20 +489,17 @@ class PyPLZModel:
 
             # makes model rgb
             sci_list = []
-            light_list = []
-            source_list = []
+            model_list = []
             for band in self.bands:
                 sci_list.append(self.sci[band])
-                lmodel = 0.*self.sci[band]
-                smodel = 0.*self.sci[band]
+                comp_list = []
                 for light in light_ind_model:
-                    lmodel += light[band]
-                light_list.append(lmodel)
+                    comp_list.append(light[band])
                 for source in source_ind_model:
-                    smodel += source[band]
-                source_list.append(smodel)
+                    comp_list.append(source[band])
+                model_list.append(comp_list)
             
-            pyplz_rgbtools.make_full_rgb(sci_list, light_list, source_list, outname=rgbname)
+            pyplz_rgbtools.make_full_rgb(sci_list, model_list, outname=rgbname)
 
     def write_config_file(self, config, outname):
     
