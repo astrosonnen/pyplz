@@ -501,6 +501,7 @@ class PyPLZModel:
  
             pyplz_rgbtools.make_full_rgb(sci_list, model_list, outname=rgbname, scheme=config['rgbscheme'], cuts=config['rgbcuts'], scales=config['rgbscales'])
 
+
     def write_config_file(self, config, outname):
     
         conflines = []
