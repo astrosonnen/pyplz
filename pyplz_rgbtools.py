@@ -95,9 +95,8 @@ def make_crazy_pil_format(data, cuts):
     return l
 
 
-def make_one_rgb(sci, model, cuts=(99., 99., 99.)):
+def make_one_rgb(sci, model, scheme='LINEAR', cuts=(99., 99., 99.), scales=None):
 
-    auto_cuts = []
     data = []
     fullresid = []
     fullmodel = []
@@ -109,17 +108,26 @@ def make_one_rgb(sci, model, cuts=(99., 99., 99.)):
 
     for i in range(3):
         data.append(sci[i])
-        cut = np.percentile(sci[i], cuts[i])
-        auto_cuts.append(cut)
         tmp_fullmodel = 0.*sci[i]
         for comp in model:
             tmp_fullmodel += comp[i]
         fullmodel.append(tmp_fullmodel)
         fullresid.append(sci[i] - tmp_fullmodel)
 
-    dlist = make_crazy_pil_format(data, auto_cuts)
-    fmlist = make_crazy_pil_format(fullmodel, auto_cuts)
-    frlist = make_crazy_pil_format(fullresid, auto_cuts)
+    if scheme == 'LINEAR':
+        auto_cuts = []
+        for i in range(3):
+            cut = np.percentile(sci[i], cuts[i])
+            auto_cuts.append(cut)
+
+        dlist = make_crazy_pil_format(data, auto_cuts)
+        fmlist = make_crazy_pil_format(fullmodel, auto_cuts)
+        frlist = make_crazy_pil_format(fullresid, auto_cuts)
+
+    elif scheme == 'M16':
+        dlist = marshall16_pil_format(data, scales)
+        fmlist = marshall16_pil_format(fullmodel, scales)
+        frlist = marshall16_pil_format(fullresid, scales)
 
     s = (data[0].shape[1], data[0].shape[0])
     im = Image.new('RGB', (ncol*data[0].shape[0], data[0].shape[1]), 'black')
@@ -140,7 +148,11 @@ def make_one_rgb(sci, model, cuts=(99., 99., 99.)):
         rgb_list = []
         for i in range(3):
             rgb_list.append(model[n][i])
-        dlist = make_crazy_pil_format(rgb_list, auto_cuts)
+        if scheme == 'LINEAR':
+            dlist = make_crazy_pil_format(rgb_list, auto_cuts)
+        elif scheme == 'M16':
+            dlist = marshall16_pil_format(rgb_list, scales)
+
         dim = Image.new('RGB', s, 'black')
         dim.putdata(dlist)
         im.paste(dim, ((2+n)*s[1], 0,))
@@ -148,7 +160,7 @@ def make_one_rgb(sci, model, cuts=(99., 99., 99.)):
     return im
 
 
-def make_full_rgb(sci_list, comp_list, outname='rgb.png'):
+def make_full_rgb(sci_list, comp_list, outname='rgb.png', scheme='LINEAR', cuts=None, scales=None):
 
     rgbsets = []
     ntotbands = len(sci_list)
@@ -182,6 +194,12 @@ def make_full_rgb(sci_list, comp_list, outname='rgb.png'):
         sci_here = []
         for ind in rgbsets[i]:
             sci_here.append(sci_list[ind])
+        if scheme == 'M16':
+            scales_here = []
+            for ind in rgbsets[i]:
+                scales_here.append(scales[ind])
+        else:
+            scales_here = None
 
         model_list = []
         for n in range(ncomp):
@@ -190,7 +208,7 @@ def make_full_rgb(sci_list, comp_list, outname='rgb.png'):
                 model_here.append(comp_list[ind][n])
             model_list.append(model_here)
 
-        im = make_one_rgb(sci_here, model_list)
+        im = make_one_rgb(sci_here, model_list, scheme=scheme, cuts=cuts, scales=scales_here)
 
         fullim.paste(im, (0, i*s[1]))
 

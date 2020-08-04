@@ -16,6 +16,8 @@ filter_suffix: .txt
 filters: g, r, i, z, y
 zeropoints: 27.000000, 27., 27., 27., 27.
 modeltype: SED
+rgbscheme: M16
+rgbscales: 1.8, 0.6, 0.4, 0.3, 0.3
 
 
 # MODELS

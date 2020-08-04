@@ -318,7 +318,7 @@ class PyPLZModel:
         self.logp = -0.5*chi2sum
         return chi2sum
 
-    def save(self, outname, make_rgb=True):
+    def save(self, outname, config, make_rgb=True):
     
         fitsname = outname+'.fits'
         rgbname = outname+'_rgb.png'
@@ -401,15 +401,29 @@ class PyPLZModel:
                     comp_list.append(source[band])
                 model_list.append(comp_list)
             
-            pyplz_rgbtools.make_full_rgb(sci_list, model_list, outname=rgbname)
+            pyplz_rgbtools.make_full_rgb(sci_list, model_list, outname=rgbname, scheme=config['rgbscheme'], cuts=config['rgbcuts'], scales=config['rgbscales'])
 
     def write_config_file(self, config, outname):
     
         conflines = []
-        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'Nthreads', 'burnin', 'filter_prefix', 'filter_suffix', 'modeltype']
+        confpars = ['data_dir', 'mask_dir', 'maskname', 'output_dir', 'filename', 'science_tag', 'err_tag', 'err_type', 'psf_tag', 'rmax', 'Nwalkers', 'Nsteps', 'burnin', 'filter_prefix', 'filter_suffix', 'modeltype', 'rgbscheme']
         for parname in confpars:
             if config[parname] is not None:
                 conflines.append('%s: %s\n'%(parname, config[parname]))
+        if config['rgbcuts'] is not None:
+            rgbcutsline = 'rgbcuts:'
+            for cut in config['rgbcuts']:
+                rgbcutsline += ' %2.1f'%cut
+            rgbcutsline += '\n'
+            conflines.append(rgbcutsline)
+
+        if config['rgbscales'] is not None:
+            rgbscalesline = 'rgbscales:'
+            for scale in config['rgbscales']:
+                rgbscalesline += ' %f'%scale
+            rgbscalesline += '\n'
+            conflines.append(rgbscalesline)
+
         filtline = 'filters: '
         zpline = 'zeropoints: '
         for i in range(self.nbands -1):

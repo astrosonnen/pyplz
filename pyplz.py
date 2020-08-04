@@ -88,7 +88,7 @@ for configfile in confnames:
         model.update()
         model.optimize_amp()
 
-        model.save(modelname)
+        model.save(modelname, config)
         model.write_config_file(config, modelname)
 
     elif key == 'c':
@@ -111,5 +111,5 @@ for configfile in confnames:
         model.update()
         model.optimize_amp()
 
-        model.save(modelname)
+        model.save(modelname, config)
 
