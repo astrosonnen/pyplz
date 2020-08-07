@@ -9,8 +9,8 @@ rmax: 20.0
 Nwalkers: 100
 Nsteps: 500
 reference_band: i
-filter_prefix: HSC-
-filter_suffix: .txt
+filter_prefix: HSC_
+filter_suffix: .res
 filters: g, r, i, z, y
 zeropoints: 27.000000, 27.000000, 27.000000, 27.000000, 27.000000
 modeltype: SED
