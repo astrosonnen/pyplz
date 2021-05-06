@@ -236,6 +236,8 @@ class PyPLZModel:
         
             if comp['class'] == 'Sersic':
                 light = SBModels.Sersic('light%d'%ncomp, pars_here)
+            elif comp['class'] == 'Ring':
+                light = SBModels.Ring('light%d'%ncomp, pars_here)
             elif comp['class'] == 'PointSource':
                 light = SBModels.PointSource('light%d'%ncomp, psfdic, pars_here)
             else:
@@ -355,8 +357,8 @@ class PyPLZModel:
         
         modarr = np.array(modlist).T
         if np.isnan(modarr).any() or not np.isfinite(modarr).any():
-            amps = np.ones(self.nlight + self.nsource)
-            chi = 1e300
+            self.logp = -0.5e300
+            return 1e300
         else:
             amps, chi = nnls(modarr, (self.scistack/self.errstack).ravel()[self.maskstack_r])
 

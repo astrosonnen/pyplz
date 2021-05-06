@@ -7,7 +7,8 @@ import os
 
 
 tempdir = os.environ.get('PYPLZDIR') + '/templates/'
-parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PointSource': ['x', 'y']}
+parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PointSource': ['x', 'y'],\
+            'Ring': ['x', 'y', 'q', 'rr', 'hi', 'ho', 'pa']}
 
 def cnts2mag(cnts, zp):
     from math import log10
@@ -166,5 +167,20 @@ class PointSource(PixelizedModel):
 
     def Mag(self,zp):
         return self.getMag(self.amp,zp)
+
+
+class Ring(SBModel, SBProfiles.Ring):
+    _baseProfile = SBProfiles.Ring
+    _SBkeys = [['amp', 'hi', 'ho', 'pa', 'q', 'rr', 'x', 'y']]
+
+    def __init__(self, name, pars, convolve=0):
+        SBModel.__init__(self, name, pars, convolve)
+
+    def getMag(self, amp, zp):
+        cnts = amp
+        return cnts2mag(cnts, zp)
+
+    def Mag(self, zp):
+        return self.getMag(self.amp, zp)
 
 

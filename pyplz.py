@@ -80,10 +80,10 @@ for configfile in confnames:
 
         chain = h5py.File(chainname, 'r')
 
-        ML = chain['logp'].value.argmax()
+        ML = chain['logp'][()].argmax()
         modelname = config['output_dir']+configfile+'_ML'
         for i in range(len(model.pars)):
-            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[ML]
+            model.pars[i].value = chain['%s'%model.index2par[i]][()]flatten()[ML]
 
         model.update()
         model.optimize_amp()
@@ -97,7 +97,7 @@ for configfile in confnames:
 
         modelname = config['output_dir']+configfile+'_%06d'%saveind
         for i in range(len(model.pars)):
-            model.pars[i].value = chain['%s'%model.index2par[i]].value.flatten()[saveind]
+            model.pars[i].value = chain['%s'%model.index2par[i]][()].flatten()[saveind]
 
         model.update()
         model.optimize_amp()

@@ -1,0 +1,36 @@
+data_dir: ./data
+output_dir: ./
+filename: 42305780052942573
+science_tag: _sci.fits
+err_tag: _var.fits
+err_type: VAR
+psf_tag: _psf.fits
+rmax: 20.
+Nwalkers: 50
+Nsteps: 30
+filter_prefix: HSC-
+filter_suffix: .txt
+filters: g, r, i, z, y
+zeropoints: 27.000000, 27., 27., 27., 27.
+modeltype: standard
+
+
+# MODELS
+
+light_model Sersic
+x 100. 98.000000 102.000000 0.300000 1
+y 100. 98.000000 102.000000 0.300000 1
+pa 60. -90.000000 90.000000 5.000000 1
+q 0.6 0.200000 2.000000 0.050000 1
+re 7.069562 1. 20. 1. 1
+n 4.000000 0.5 8. 1. 0
+
+light_model Ring
+x 100. 98.000000 102.000000 0.300000 1 light1.x
+y 100. 98.000000 102.000000 0.300000 1 light1.y
+pa 60. -90.000000 90.000000 5.000000 1
+q 0.4 0.200000 2.000000 0.050000 1
+rr 10. 0. 30. 3. 1
+hi 3. 0. 10. 1. 1
+ho 3. 0. 20. 1. 1
+

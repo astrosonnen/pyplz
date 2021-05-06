@@ -95,4 +95,33 @@ class Sersic:
         return self.amp*s.reshape(shape)
 
 
+class Ring:
+    def __init__(self, x=None, y=None, q=None, pa=None, rr=None, amp=None, hi=None, ho=None):
+        self.x = x
+        self.y = y
+        self.q = q
+        self.pa = pa
+        self.rr = rr
+        self.amp = amp
+        self.hi = hi
+        self.ho = ho
+        self.convolve = True
+
+    def pixeval(self, x, y):
+        from math import pi,cos as COS,sin as SIN
+        shape = x.shape
+        x = x.ravel()
+        y = y.ravel()
+
+        cos = COS(self.pa*pi/180.)
+        sin = SIN(self.pa*pi/180.)
+        xp = (x-self.x)*cos+(y-self.y)*sin
+        yp = (y-self.y)*cos-(x-self.x)*sin
+        r = (self.q*xp**2+yp**2/self.q)**0.5
+
+        inner = 0.5*(np.sign(self.rr - r) + 1.)*np.exp(-(self.rr - r)/self.hi)
+        outer = 0.5*(np.sign(r - self.rr) + 1.)*np.exp(-(r - self.rr)/self.ho)
+
+        return self.amp*(inner + outer).reshape(shape)
+
 
