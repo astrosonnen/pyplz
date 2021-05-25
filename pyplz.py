@@ -83,7 +83,7 @@ for configfile in confnames:
         ML = chain['logp'][()].argmax()
         modelname = config['output_dir']+configfile+'_ML'
         for i in range(len(model.pars)):
-            model.pars[i].value = chain['%s'%model.index2par[i]][()]flatten()[ML]
+            model.pars[i].value = chain['%s'%model.index2par[i]][()].flatten()[ML]
 
         model.update()
         model.optimize_amp()
