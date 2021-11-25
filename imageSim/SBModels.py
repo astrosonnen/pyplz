@@ -23,6 +23,7 @@ class SBModel:
         keylist = sorted(self.keys)
         if keylist not in self._SBkeys:
             import sys
+            print(keylist)
             print('Not all (or too many) parameters were defined!')
             sys.exit()
         self._baseProfile.__init__(self)
@@ -133,8 +134,8 @@ class PointSource(PixelizedModel):
         if 'amp' not in pars.keys():
             pars['amp'] = 1.
         self.keys = pars.keys()
-        self.keys.sort()
-        if self.keys!=['amp', 'x', 'y']:
+        keylist = sorted(self.keys)
+        if keylist!=['amp', 'x', 'y']:
             import sys
             print('Not all (or too many) parameters were defined!')
             print(self.keys)
@@ -142,7 +143,7 @@ class PointSource(PixelizedModel):
         PixelizedModel.__init__(self, model)
         self.vmap = {}
         self.pars = pars
-        for key in self.keys:
+        for key in keylist:
             try:
                 v = self.pars[key].value
                 self.vmap[key] = self.pars[key]
@@ -172,6 +173,21 @@ class PointSource(PixelizedModel):
 class Ring(SBModel, SBProfiles.Ring):
     _baseProfile = SBProfiles.Ring
     _SBkeys = [['amp', 'hi', 'ho', 'pa', 'q', 'rr', 'x', 'y']]
+
+    def __init__(self, name, pars, convolve=0):
+        SBModel.__init__(self, name, pars, convolve)
+
+    def getMag(self, amp, zp):
+        cnts = amp
+        return cnts2mag(cnts, zp)
+
+    def Mag(self, zp):
+        return self.getMag(self.amp, zp)
+
+
+class Spiral(SBModel, SBProfiles.Spiral):
+    _baseProfile = SBProfiles.Spiral
+    _SBkeys = [['A', 'B', 'N', 'amp', 'h', 'omega', 'pa', 'q', 'rmax', 'x', 'y']]
 
     def __init__(self, name, pars, convolve=0):
         SBModel.__init__(self, name, pars, convolve)

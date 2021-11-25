@@ -64,7 +64,8 @@ for configfile in confnames:
 
     if key == 'M' or key == 'l':
    
-        chainname = config['output_dir']+configfile+'_chain.hdf5'
+        #chainname = config['output_dir']+configfile+'_chain.hdf5'
+        chainname = configfile+'_chain.hdf5'
         if len(sys.argv) > 3:
             npars = len(model.pars)
             old_chainname = sys.argv[3]
@@ -81,7 +82,8 @@ for configfile in confnames:
         chain = h5py.File(chainname, 'r')
 
         ML = chain['logp'][()].argmax()
-        modelname = config['output_dir']+configfile+'_ML'
+        #modelname = config['output_dir']+configfile+'_ML'
+        modelname = configfile+'_ML'
         for i in range(len(model.pars)):
             model.pars[i].value = chain['%s'%model.index2par[i]][()].flatten()[ML]
 
@@ -93,9 +95,11 @@ for configfile in confnames:
 
     elif key == 'c':
     
-        chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
+        #chain = h5py.File(config['output_dir']+configfile+'_chain.hdf5', 'r')
+        chain = h5py.File(configfile+'_chain.hdf5', 'r')
 
-        modelname = config['output_dir']+configfile+'_%06d'%saveind
+        #modelname = config['output_dir']+configfile+'_%06d'%saveind
+        modelname = configfile+'_%06d'%saveind
         for i in range(len(model.pars)):
             model.pars[i].value = chain['%s'%model.index2par[i]][()].flatten()[saveind]
 
@@ -106,7 +110,8 @@ for configfile in confnames:
   
     elif key == 's':
 
-        modelname = config['output_dir']+configfile
+        #modelname = config['output_dir']+configfile
+        modelname = configfile
 
         model.update()
         model.optimize_amp()

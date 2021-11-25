@@ -125,3 +125,93 @@ class Ring:
         return self.amp*(inner + outer).reshape(shape)
 
 
+class Spiral:
+    def __init__(self, x=None, y=None, q=None, pa=None, A=None, B=None, N=None, amp=None, h=None, rmax=None, omega=0.):
+
+        self.x = x
+        self.y = y
+        self.q = q
+        self.pa = pa
+        self.A = A
+        self.B = B
+        self.amp = amp
+        self.N = N
+        self.h = h
+        self.rmax = rmax
+        self.omega = omega
+        self.convolve = True
+
+    def pixeval(self, x, y, niter_max=10):
+        from math import pi,cos as COS,sin as SIN
+        shape = x.shape
+        x = x.ravel()
+        y = y.ravel()
+
+        cos = COS(self.pa*pi/180.)
+        sin = SIN(self.pa*pi/180.)
+        tan = np.tan(self.pa*pi/180.)
+
+        xp = (x-self.x)*cos+(y-self.y)*sin
+        yp = (y-self.y)*cos-(x-self.x)*sin
+        r = (self.q*xp**2+yp**2/self.q)**0.5
+
+        xs = xp*self.q**0.5
+        ys = yp/self.q**0.5
+
+        phi_max = 2.*self.N*np.arctan(1./self.B)
+        sb = 0.*x
+
+        phi0 = np.arctan(ys/xs) - self.omega/180.*np.pi
+        phi = phi0.copy()
+
+        phi_min = phi[phi==phi].min()
+
+        niter = 0
+        while phi_min < phi_max and niter < niter_max:
+            tanphi2N = np.tan(0.5*phi/self.N)
+            r0 = -self.A / np.log(self.B * tanphi2N)
+            dr = abs(r - r0)
+            good = (self.B * tanphi2N < 1.) & (tanphi2N > 0.) & (r < self.rmax)
+            sb[good] += self.amp * np.exp(-dr[good]/self.h)
+            phi += np.pi
+            phi_min = phi[phi==phi].min()
+            niter += 1
+
+        """
+        # draws the first arm
+        phi1 = phi0.copy()
+        phi1[xs<0.] += np.pi
+        phi1[(xs>0.)&(ys<0.)] += 2.*np.pi
+
+        phi1_max = 0.
+
+        niter = 0
+        while phi1_max < phi_max and niter < niter_max:
+           tanphi2N = np.tan(0.5*phi1/self.N)
+           r1 = -self.A / np.log(self.B * tanphi2N)
+           dr = abs(r - r1)
+           good = self.B * tanphi2N < 1.
+           sb[good] += self.amp * np.exp(-dr[good]/self.h)
+           phi1_max += 2.*np.pi
+           niter += 1
+
+        # draws the second arm
+        phi2 = phi0.copy()
+        phi2[xs>0.] += np.pi
+        phi2[(xs<0.)&(ys>0.)] += 2.*np.pi
+
+        phi2_max = 0.
+
+        niter = 0
+        while phi2_max < phi_max and niter < niter_max:
+           tanphi2N = np.tan(0.5*phi2/self.N)
+           r2 = -self.A / np.log(self.B * tanphi2N)
+           dr = abs(r - r2)
+           good = self.B * tanphi2N < 1.
+           sb[good] += self.amp * np.exp(-dr[good]/self.h)
+           phi2_max += 2.*np.pi
+           niter += 1
+        """
+
+        return sb.reshape(shape)
+
