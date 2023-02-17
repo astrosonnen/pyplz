@@ -690,6 +690,9 @@ class PyPLZModel:
         n = 0
         for light, sed in zip(self.light_sb_models, self.light_sed_models):
         
+            for parname in SBModels.parlists[light.__class__.__name__]:
+                hdr['%s.%s'%(light.name, parname)] = light.pars[parname].value
+
             light_ind_dic = {}
     
             if light.__class__.__name__ == 'PointSource':
@@ -710,6 +713,9 @@ class PyPLZModel:
 
         for source, sed in zip(self.source_sb_models, self.source_sed_models):
         
+            for parname in SBModels.parlists[source.__class__.__name__]:
+                hdr['%s.%s'%(source.name, parname)] = source.pars[parname].value
+
             source_ind_dic = {}
     
             spix = source.pixeval(xl, yl)

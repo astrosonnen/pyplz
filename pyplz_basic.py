@@ -340,6 +340,9 @@ class PyPLZModel:
     
             light.amp = 1.
             lpix = light.pixeval(self.X, self.Y)
+            for parname in SBModels.parlists[light.__class__.__name__]:
+                hdr['%s.%s'%(light.name, parname)] = light.pars[parname].value
+
             for band in self.bands:
                 hdr['%s.mag_%s'%(light.name, band)] = mags[band]
                 scale = 10.**(-2./5.*(mags[band] - light.Mag(self.zp[band])))
@@ -351,6 +354,9 @@ class PyPLZModel:
             n += 1
 
         for source, mags in zip(self.source_sb_models, self.source_mags):
+
+            for parname in SBModels.parlists[source.__class__.__name__]:
+                hdr['%s.%s'%(source.name, parname)] = source.pars[parname].value
 
             source_ind_dic = {}
     
