@@ -40,6 +40,42 @@ def marshall16_pil_format(images, scales=(1., 1., 1.), alpha=1., Q=1.):
     return l
 
 
+def marshall16(images, scales=(1., 1., 1.), alpha=1., Q=1.):
+
+    r = images[0] * scales[0]
+    g = images[1] * scales[1]
+    b = images[2] * scales[2]
+
+    I = (r + g + b)
+    f = np.arcsinh(alpha*I*Q)
+
+    R = r*f/(I*Q)
+    G = g*f/(I*Q)
+    B = b*f/(I*Q)
+
+    R = R * 255.
+    G = G * 255.
+    B = B * 255.
+
+    R[R<0.] = 0.
+    G[G<0.] = 0.
+    B[B<0.] = 0.
+
+    R[R>255.] = 255.
+    G[G>255.] = 255.
+    B[B>255.] = 255.
+
+    ny, nx = images[0].shape
+
+    output = np.zeros((ny, nx, 3), dtype=int)
+
+    for n, img in zip(range(3), [R, G, B]):
+        img = np.uint8(img.round())
+        img = np.flipud(img)
+        output[:, :, n] = img
+
+    return output
+
 def lupton04_pil_format(images, scales=(1., 1., 1.), beta=1.):
 
     r = images[0] * scales[0]
