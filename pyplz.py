@@ -74,6 +74,7 @@ for configfile in confnames:
             walkers = np.zeros((config['Nwalkers'], npars))
             for i in range(npars):
                 walkers[:, i] = old_chain[model.index2par[i]][:, -1]
+            old_chain.close()
         else:
             walkers = config['Nwalkers']
 
