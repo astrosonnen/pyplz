@@ -42,7 +42,7 @@ def read_config(filename):
         config['rgbscales'] = None
         if config['rgbcuts'] is not None:
             cutlist = []
-            cuts = config['rgbcuts'].split('')
+            cuts = config['rgbcuts'].split(' ')
             for cut in cuts:
                 cutlist.append(float(cut))
 
