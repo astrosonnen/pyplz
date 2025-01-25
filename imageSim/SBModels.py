@@ -7,7 +7,7 @@ import os
 
 
 tempdir = os.environ.get('PYPLZDIR') + '/templates/'
-parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'PointSource': ['x', 'y'],\
+parlists = {'Sersic': ['x', 'y', 'q', 're', 'pa', 'n'], 'Sersic_e1e2': ['x', 'y', 'e1', 'e2', 're', 'n'], 'PointSource': ['x', 'y'],\
             'Ring': ['x', 'y', 'q', 'rr', 'hi', 'ho', 'pa']}
 
 def cnts2mag(cnts, zp):
@@ -102,7 +102,37 @@ class Sersic(SBModel,SBProfiles.Sersic):
     _SBkeys = [['amp','n','pa','q','re','x','y'],
                 ['logamp','n','pa','q','re','x','y'],
                 ['amp','n','q','re','theta','x','y'],
-                ['logamp','n','q','re','theta','x','y']]
+                ['logamp','n','q','re','theta','x','y'], \
+                ['amp', 'e1', 'e2', 'n', 're', 'x', 'y']]
+
+    def __init__(self,name,pars,convolve=0):
+        SBModel.__init__(self,name,pars,convolve)
+
+    def getMag(self,amp,zp):
+        from scipy.special import gamma
+        from math import exp,pi
+        n = self.n
+        re = self.re
+        k = 2.*n-1./3+4./(405.*n)+46/(25515.*n**2)
+        cnts = (re**2)*amp*exp(k)*n*(k**(-2*n))*gamma(2*n)*2*pi
+        return cnts2mag(cnts,zp)
+
+    def Mag(self,zp):
+        return self.getMag(self.amp,zp)
+
+    def setAmpFromMag(self,mag,zp):
+        from math import exp,log10,pi
+        from scipy.special import gamma
+        cnts = 10**(-0.4*(mag-zp))
+        n = self.n
+        re = self.re
+        k = 2.*n-1./3+4./(405.*n)+46/(25515.*n**2)
+        self.amp = cnts/((re**2)*exp(k)*n*(k**(-2*n))*gamma(2*n)*2*pi)
+
+
+class Sersic_e1e2(SBModel,SBProfiles.Sersic_e1e2):
+    _baseProfile = SBProfiles.Sersic_e1e2
+    _SBkeys = [['amp', 'e1', 'e2', 'n', 're', 'x', 'y']]
 
     def __init__(self,name,pars,convolve=0):
         SBModel.__init__(self,name,pars,convolve)

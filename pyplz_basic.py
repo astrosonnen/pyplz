@@ -212,6 +212,8 @@ class PyPLZModel:
        
             if comp['class'] == 'Sersic':
                 light = SBModels.Sersic('light%d'%ncomp, pars_here)
+            elif comp['class'] == 'Sersic_e1e2':
+                light = SBModels.Sersic_e1e2('light%d'%ncomp, pars_here)
             elif comp['class'] == 'PointSource':
                 light = SBModels.PointSource('light%d'%ncomp, psfdic, pars_here)
             elif comp['class'] == 'Ring':
@@ -233,17 +235,18 @@ class PyPLZModel:
         
             pars_here = {}
             for par in comp['pars']:
-                if par in SBModels.parlists['Sersic']:
+                if par in SBModels.parlists[comp['class']]:
                     if comp['pars'][par]['link'] is None:
                         if comp['pars'][par]['var'] == 1:
                             pars_here[par] = self.pars[self.par2index[name+'.'+par]]
                         else:
-                            pars_here[par] = comp['pars'][par]['value']
+                            pars_here[par] = Par(par, lower=comp['pars'][par]['value'], upper=comp['pars'][par]['value'], value=comp['pars'][par]['value'])
                     else:
                         pars_here[par] = self.pars[self.par2index[comp['pars'][par]['link']]]
-
             if comp['class'] == 'Sersic':
                 source = SBModels.Sersic('source%d'%ncomp, pars_here)
+            elif comp['class'] == 'Sersic_e1e2':
+                source = SBModels.Sersic_e1e2('source%d'%ncomp, pars_here)
             else:
                 df
 
@@ -475,7 +478,7 @@ class PyPLZModel:
             sourcepars = SBModels.parlists[comp['class']]    
    
             conflines.append('\n')
-            conflines.append('source_model Sersic MLflux\n')
+            conflines.append('source_model %s MLflux\n'%comp['class'])
             for par in sourcepars:
                 parname = 'source%d.%s'%(ncomp+1, par)
                 if parname in self.par2index:

@@ -140,7 +140,7 @@ def read_config(filename):
 
                 comp = {'class':model_class, 'pars':{}}
 
-                if model_class in ['Sersic']:
+                if model_class in SBModels.parlists:
                     parnames = []
                     for parname in SBModels.parlists[model_class]:
                         parnames.append(parname)
