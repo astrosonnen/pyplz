@@ -1,2 +1,7 @@
 # Compile with
 f2py -c -m powerlaw powerlaw.f
+
+# But on ARM Mac you might need to run
+f2py -c --arch=arm64 -m powerlaw powerlaw.f
+# and then rename the output file as powerlaw.so
+

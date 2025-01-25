@@ -1,5 +1,6 @@
 #from ndinterp import ndInterp
 from math import pi
+from pylens.powerlaw import powerlawdeflections as pld
 
 class MassProfile:
     """
@@ -69,7 +70,7 @@ class PowerLaw(MassProfile):
             xout = self.b*asinh(eps*x/q/r)*q**0.5/eps
             yout = self.b*asin(eps*y/r)*q**0.5/eps
         else:
-            from powerlaw import powerlawdeflections as pld
+            #from powerlaw import powerlawdeflections as pld
             b,eta = self.b,self.eta
             s = 1e-7
             if x.ndim>1:
