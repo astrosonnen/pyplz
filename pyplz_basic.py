@@ -396,6 +396,17 @@ class PyPLZModel:
     
                 hdulist.append(hdu_here)
     
+        # saves the residuals
+        for band in self.bands:
+            resid = self.sci[band].copy()
+            for light, light_ind_dic in zip(self.light_sb_models, light_ind_model):
+                resid -= light_ind_dic[band]
+            for source, source_ind_dic in zip(self.source_sb_models, source_ind_model):
+                resid -= source_ind_dic[band]
+            hdu_here = pyfits.ImageHDU(data=resid)
+            hdu_here.header['EXTNAME'] = 'resid_%s'%band
+            hdulist.append(hdu_here)
+
         hdulist.writeto(fitsname, overwrite=True)
         
         if make_rgb:
