@@ -333,6 +333,7 @@ class PyPLZModel:
     
         light_ind_model = []
         source_ind_model = []
+        orig_ind_model = []
 
         xl, yl = pylens.getDeflections(self.lens_models, (self.X, self.Y))
  
@@ -362,9 +363,11 @@ class PyPLZModel:
                 hdr['%s.%s'%(source.name, parname)] = source.pars[parname].value
 
             source_ind_dic = {}
+            orig_ind_dic = {}
     
             source.amp = 1.
             spix = source.pixeval(xl, yl)
+            opix = source.pixeval(self.X, self.Y)
         
             for band in self.bands:
                 hdr['%s.mag_%s'%(source.name, band)] = mags[band]
@@ -373,7 +376,12 @@ class PyPLZModel:
     
                 source_ind_dic[band] = source_ind_here
     
+                orig_ind_here = scale * opix # does not convolve by the psf
+    
+                orig_ind_dic[band] = orig_ind_here
+
             source_ind_model.append(source_ind_dic)
+            orig_ind_model.append(orig_ind_dic)
         
             n += 1
 
@@ -389,13 +397,18 @@ class PyPLZModel:
     
                 hdulist.append(hdu_here)
     
-        for source, source_ind_dic in zip(self.source_sb_models, source_ind_model):
+        for source, source_ind_dic, orig_ind_dic in zip(self.source_sb_models, source_ind_model, orig_ind_model):
             for band in self.bands:
                 hdu_here = pyfits.ImageHDU(data=source_ind_dic[band])
                 hdu_here.header['EXTNAME'] = '%s_%s'%(source.name, band)
     
                 hdulist.append(hdu_here)
     
+                hdu_here = pyfits.ImageHDU(data=orig_ind_dic[band])
+                hdu_here.header['EXTNAME'] = '%s_orig_%s'%(source.name, band)
+
+                hdulist.append(hdu_here)
+
         # saves the residuals
         for band in self.bands:
             resid = self.sci[band].copy()
