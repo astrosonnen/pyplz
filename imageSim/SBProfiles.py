@@ -116,10 +116,21 @@ class Sersic_e1e2:
     def coords2rcirc(self,x,y):
 
         e_tot = (self.e1**2 + self.e2**2)**0.5
-        q_tot = 1. - e_tot
-        cos2phi = self.e1/e_tot
-        sin2phi = self.e2/e_tot
+        if e_tot > 0. and e_tot < 1.:
+            q_tot = 1. - e_tot
+            cos2phi = self.e1/e_tot
+            sin2phi = self.e2/e_tot
 
+        elif e_tot == 0.:
+            q_tot = 1.
+            cos2phi = 1.
+            sin2phi = 0.
+
+        else:
+            q_tot = -1.
+            cos2phi = 1.
+            sin2phi = 0.
+            
         cos = (0.5*(1. + cos2phi))**0.5 * (2.*np.heaviside(sin2phi, 1.) - 1.)
         sin = (0.5*(1. - cos2phi))**0.5
 
@@ -142,9 +153,20 @@ class Sersic_e1e2:
         y = y.ravel()
 
         e_tot = (self.e1**2 + self.e2**2)**0.5
-        q_tot = 1. - e_tot
-        cos2phi = self.e1/e_tot
-        sin2phi = self.e2/e_tot
+        if e_tot > 0. and e_tot < 1.:
+            q_tot = 1. - e_tot
+            cos2phi = self.e1/e_tot
+            sin2phi = self.e2/e_tot
+
+        elif e_tot == 0.:
+            q_tot = 1.
+            cos2phi = 1.
+            sin2phi = 0.
+
+        else:
+            q_tot = -1.
+            cos2phi = 1.
+            sin2phi = 0.
 
         cos = (0.5*(1. + cos2phi))**0.5 * (2.*np.heaviside(sin2phi, 1.) - 1.)
         sin = (0.5*(1. - cos2phi))**0.5
