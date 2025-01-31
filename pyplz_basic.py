@@ -414,8 +414,15 @@ class PyPLZModel:
             resid = self.sci[band].copy()
             for light, light_ind_dic in zip(self.light_sb_models, light_ind_model):
                 resid -= light_ind_dic[band]
+            lsub = resid.copy()
+
+            hdu_here = pyfits.ImageHDU(data=lsub)
+            hdu_here.header['EXTNAME'] = 'lsub_%s'%band
+            hdulist.append(hdu_here)
+
             for source, source_ind_dic in zip(self.source_sb_models, source_ind_model):
                 resid -= source_ind_dic[band]
+
             hdu_here = pyfits.ImageHDU(data=resid)
             hdu_here.header['EXTNAME'] = 'resid_%s'%band
             hdulist.append(hdu_here)

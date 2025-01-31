@@ -69,7 +69,10 @@ def read_config(filename):
     config['Nwalkers'] = int(config['Nwalkers'])
     if config['burnin'] is not None:
         config['burnin'] = int(config['burnin'])
-    config['rmax'] = float(config['rmax'])
+    if config['rmax'] is not None:
+        config['rmax'] = float(config['rmax'])
+    else:
+        config['rmax'] = np.inf
 
     light_components = []
     lens_components = []
