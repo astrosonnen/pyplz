@@ -274,7 +274,7 @@ class PyPLZModel:
                         if comp['pars'][par]['var'] == 1:
                             pars_here[par] = self.pars[self.par2index[name+'.'+par]]
                         else:
-                            pars_here[par] = comp['pars'][par]['value']
+                            pars_here[par] = Par(par, lower=comp['pars'][par]['value'], upper=comp['pars'][par]['value'], value=comp['pars'][par]['value'])
                     else:
                         pars_here[par] = self.pars[self.par2index[comp['pars'][par]['link']]]
                 else:
