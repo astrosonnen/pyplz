@@ -188,7 +188,12 @@ class PyPLZModel:
         
             ncomp += 1
         
-            lens = MassModels.PowerLaw(name, pars_here)
+            if comp['class'] == 'Powerlaw':
+                lens = MassModels.PowerLaw(name, pars_here)
+            elif comp['class'] == 'ExtShear':
+                lens = MassModels.ExtShear(name, pars_here)
+            else:
+                df
             self.lens_models.append(lens)
         
         self.nlens = len(self.lens_models)
@@ -528,12 +533,21 @@ class PyPLZModel:
             ncomp += 1
         
         ncomp = 0
-        powpars = ['x', 'y', 'pa', 'q', 'b', 'eta']
         
         for lens in self.lens_models:
             conflines.append('\n')
-            conflines.append('lens_model Powerlaw\n')
-            for par in powpars:
+            lenstype = str(type(lens)).split('.')[2][:-2]
+            if lenstype == 'PowerLaw':
+                lenstype = 'Powerlaw' # SORRY!
+                lenspars = ['x', 'y', 'pa', 'q', 'b', 'eta']
+            elif lenstype == 'ExtShear':
+                lenspars = ['x', 'y', 'pa', 'b']
+            else:
+                print(lenstype)
+                df
+
+            conflines.append('lens_model %s\n'%lenstype)
+            for par in lenspars:
                 parname = 'lens%d.%s'%(ncomp+1, par)
                 if parname in self.par2index:
                     npar = self.par2index[parname]
@@ -545,6 +559,7 @@ class PyPLZModel:
                         lname = config['lens_components'][ncomp]['pars'][par]['link']
                         npar = self.par2index[lname]
                         conflines.append('%s %f %f %f %f 1 %s\n'%(par, self.pars[npar].value, self.pars[npar].lower, self.pars[npar].upper, self.pars[npar].step, lname))
+
             ncomp += 1
         
         conflines.append('\n')

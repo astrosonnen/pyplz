@@ -200,6 +200,9 @@ def read_config(filename):
                 if model_class == 'Powerlaw':
                     npars = 6
                     parnames = ['x', 'y', 'q', 'pa', 'b', 'eta']
+                elif model_class == 'ExtShear':
+                    parnames = ['x', 'y', 'b', 'pa']
+                    npars = 4
                 else:
                     df
 
